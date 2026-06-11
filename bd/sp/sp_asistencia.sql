@@ -41,3 +41,24 @@ BEGIN
     VALUES (@IdUsuario, @IdTipoEvento, @IPOrigen, GETDATE(), @Parametros, @DatosAntes, @DatosDespues);
 END;
 GO
+-- ============================================================
+-- SP: Procesar una marca de asistencia individual
+-- Parámetros:
+--   @ValorDocumento  : cédula del empleado (mapeo desde XML)
+--   @FechaHoraEntrada / @FechaHoraSalida : DATETIME
+--   @IdUsuarioSistema: usuario del proceso de simulación
+--   @IPOrigen        : IP del proceso
+-- ============================================================
+IF OBJECT_ID('sp_ProcesarAsistencia', 'P') IS NOT NULL DROP PROCEDURE sp_ProcesarAsistencia;
+GO
+CREATE PROCEDURE sp_ProcesarAsistencia
+    @ValorDocumento     VARCHAR(30),
+    @FechaHoraEntrada   DATETIME,
+    @FechaHoraSalida    DATETIME,
+    @IdUsuarioSistema   INT,
+    @IPOrigen           VARCHAR(45) = '127.0.0.1'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
