@@ -82,41 +82,41 @@ BEGIN
           ROLLBACK; RETURN;
       END;
 
-  -- 2. Obtener jornada de la semana actual (la semana que contiene FechaEntrada)
-  DECLARE @FechaEntrada   DATE = CAST(@FechaHoraEntrada AS DATE);
-  DECLARE @IdTipoJornada  INT;
-  DECLARE @HoraFinJornada TIME;
+      -- 2. Obtener jornada de la semana actual (la semana que contiene FechaEntrada)
+      DECLARE @FechaEntrada   DATE = CAST(@FechaHoraEntrada AS DATE);
+      DECLARE @IdTipoJornada  INT;
+      DECLARE @HoraFinJornada TIME;
 
-  -- La semana inicia el viernes anterior o igual a la fecha
-  -- FechaInicioSemana = viernes <= @FechaEntrada más reciente
-  SELECT TOP 1
-      @IdTipoJornada  = jes.IdTipoJornada,
-      @HoraFinJornada = tj.HoraFin
-  FROM dbo.JornadaEmpleadoSemana jes
-  INNER JOIN dbo.TipoJornada tj ON jes.IdTipoJornada = tj.IdTipoJornada
-  WHERE jes.IdEmpleado = @IdEmpleado
-    AND jes.FechaInicioSemana <= @FechaEntrada
-  ORDER BY jes.FechaInicioSemana DESC;
+      -- La semana inicia el viernes anterior o igual a la fecha
+      -- FechaInicioSemana = viernes <= @FechaEntrada más reciente
+      SELECT TOP 1
+          @IdTipoJornada  = jes.IdTipoJornada,
+          @HoraFinJornada = tj.HoraFin
+      FROM dbo.JornadaEmpleadoSemana jes
+      INNER JOIN dbo.TipoJornada tj ON jes.IdTipoJornada = tj.IdTipoJornada
+      WHERE jes.IdEmpleado = @IdEmpleado
+        AND jes.FechaInicioSemana <= @FechaEntrada
+      ORDER BY jes.FechaInicioSemana DESC;
 
-  IF @IdTipoJornada IS NULL
-  BEGIN
-      RAISERROR('No hay jornada asignada para el empleado %d en la fecha %s.', 16, 1, @IdEmpleado, CONVERT(VARCHAR,@FechaEntrada,103));
-      ROLLBACK; RETURN;
-  END;
+      IF @IdTipoJornada IS NULL
+      BEGIN
+          RAISERROR('No hay jornada asignada para el empleado %d en la fecha %s.', 16, 1, @IdEmpleado, CONVERT(VARCHAR,@FechaEntrada,103));
+          ROLLBACK; RETURN;
+      END;
 
-  -- 3. Obtener la planilla semanal activa del empleado
-  DECLARE @IdPlanillaSemXEmpleado INT;
+      -- 3. Obtener la planilla semanal activa del empleado
+      DECLARE @IdPlanillaSemXEmpleado INT;
 
-  SELECT TOP 1 @IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado
-  FROM dbo.PlanillaSemXEmpleado pse
-  INNER JOIN dbo.SemanaPlanilla sp ON pse.IdSemanaPlanilla = sp.IdSemanaPlanilla
-  WHERE pse.IdEmpleado = @IdEmpleado
-    AND sp.Cerrada = 0
-    AND sp.FechaInicio <= @FechaEntrada
-    AND sp.FechaFin    >= @FechaEntrada;
+      SELECT TOP 1 @IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado
+      FROM dbo.PlanillaSemXEmpleado pse
+      INNER JOIN dbo.SemanaPlanilla sp ON pse.IdSemanaPlanilla = sp.IdSemanaPlanilla
+      WHERE pse.IdEmpleado = @IdEmpleado
+        AND sp.Cerrada = 0
+        AND sp.FechaInicio <= @FechaEntrada
+        AND sp.FechaFin    >= @FechaEntrada;
 
-  IF @IdPlanillaSemXEmpleado IS NULL
-  BEGIN
-      RAISERROR('No hay planilla semanal abierta para el empleado %d.', 16, 1, @IdEmpleado);
-      ROLLBACK; RETURN;
-  END;
+      IF @IdPlanillaSemXEmpleado IS NULL
+      BEGIN
+          RAISERROR('No hay planilla semanal abierta para el empleado %d.', 16, 1, @IdEmpleado);
+          ROLLBACK; RETURN;
+      END;
