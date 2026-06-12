@@ -1,14 +1,6 @@
--- ============================================================
--- SP_CATALOGOS: Carga todos los catálogos desde el XML
--- Actualizado según Datos.xml
--- ============================================================
-
 USE PlanillaObrera;
 GO
 
--- ============================================================
--- SP: Cargar TiposDeJornada
--- ============================================================
 IF OBJECT_ID('sp_CargarTiposJornada', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposJornada;
 GO
 CREATE PROCEDURE sp_CargarTiposJornada @xmlData XML
@@ -28,9 +20,6 @@ BEGIN
     PRINT 'TiposDeJornada cargados.';
 END;
 GO
--- ============================================================
--- SP: Cargar Puestos (mapeo por nombre, PK identity)
--- ============================================================
 IF OBJECT_ID('sp_CargarPuestos', 'P') IS NOT NULL DROP PROCEDURE sp_CargarPuestos;
 GO
 CREATE PROCEDURE sp_CargarPuestos @xmlData XML
@@ -48,9 +37,6 @@ BEGIN
     PRINT 'Puestos cargados.';
 END;
 GO
--- ============================================================
--- SP: Cargar TiposDeMovimiento (con campo Accion C/D)
--- ============================================================
 IF OBJECT_ID('sp_CargarTiposMovimiento', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposMovimiento;
 GO
 CREATE PROCEDURE sp_CargarTiposMovimiento @xmlData XML
