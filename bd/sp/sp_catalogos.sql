@@ -55,11 +55,7 @@ BEGIN
     PRINT 'TiposDeMovimiento cargados.';
 END;
 GO
--- ============================================================
--- SP: Cargar TiposDeDeduccion
--- FK a dbo.TipoMovimiento resuelta por nombre (atributo dbo.TipoMovimiento)
--- Atributos: EsObligatoria, EsPorcentual (en lugar de Obligatorio/Porcentual)
--- ============================================================
+
 IF OBJECT_ID('sp_CargarTiposDeduccion', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposDeduccion;
 GO
 CREATE PROCEDURE sp_CargarTiposDeduccion @xmlData XML
@@ -83,9 +79,7 @@ BEGIN
     PRINT 'TiposDeDeduccion cargados.';
 END;
 GO
--- ============================================================
--- SP: Cargar TiposDeEvento (23 eventos)
--- ============================================================
+
 IF OBJECT_ID('sp_CargarTiposEvento', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposEvento;
 GO
 CREATE PROCEDURE sp_CargarTiposEvento @xmlData XML
@@ -103,10 +97,7 @@ BEGIN
     PRINT 'TiposDeEvento cargados.';
 END;
 GO
--- ============================================================
--- SP: Cargar Usuarios Administrador
--- Id fijo del XML (no identity), campo Tipo = 1
--- ============================================================
+
 IF OBJECT_ID('sp_CargarUsuariosAdmin', 'P') IS NOT NULL DROP PROCEDURE sp_CargarUsuariosAdmin;
 GO
 CREATE PROCEDURE sp_CargarUsuariosAdmin @xmlData XML
@@ -118,7 +109,7 @@ BEGIN
         nodo.value('@Id',       'INT'),
         nodo.value('@Username', 'VARCHAR(50)'),
         nodo.value('@pwd',      'VARCHAR(255)'),
-        1   -- tipo 1 = administrador
+        1   
     FROM @xmlData.nodes('/Catalogo/UsuariosAdministrador/dbo.Usuario') AS T(nodo)
     WHERE NOT EXISTS (
         SELECT 1 FROM dbo.Usuario WHERE IdUsuario = nodo.value('@Id','INT')
@@ -126,9 +117,7 @@ BEGIN
     PRINT 'UsuariosAdministrador cargados.';
 END;
 GO
--- ============================================================
--- SP: Cargar Códigos de Error
--- ============================================================
+
 IF OBJECT_ID('sp_CargarCodigosError', 'P') IS NOT NULL DROP PROCEDURE sp_CargarCodigosError;
 GO
 CREATE PROCEDURE sp_CargarCodigosError @xmlData XML
@@ -146,10 +135,7 @@ BEGIN
     PRINT 'CodigosError cargados.';
 END;
 GO
--- ============================================================
--- SP MAESTRO: Carga todo el XML de catálogos de una vez
--- Orden importante: TiposMovimiento antes de TiposDeduccion (FK)
--- ============================================================
+
 IF OBJECT_ID('sp_CargarCatalogos', 'P') IS NOT NULL DROP PROCEDURE sp_CargarCatalogos;
 GO
 CREATE PROCEDURE sp_CargarCatalogos @xmlData XML
@@ -163,8 +149,8 @@ BEGIN
         EXEC sp_CargarPuestos         @xmlData;
         EXEC sp_CargarFeriados        @xmlData;
         EXEC sp_CargarTiposEvento     @xmlData;
-        EXEC sp_CargarTiposMovimiento @xmlData;      -- debe ir ANTES de TiposDeduccion
-        EXEC sp_CargarTiposDeduccion  @xmlData;      -- depende de dbo.TipoMovimiento (FK por nombre)
+        EXEC sp_CargarTiposMovimiento @xmlData;      
+        EXEC sp_CargarTiposDeduccion  @xmlData;      
         EXEC sp_CargarUsuariosAdmin   @xmlData;
         EXEC sp_CargarCodigosError    @xmlData;
 
