@@ -160,3 +160,38 @@ BEGIN
     PRINT 'CodigosError cargados.';
 END;
 GO
+-- ============================================================
+-- SP MAESTRO: Carga todo el XML de catálogos de una vez
+-- Orden importante: TiposMovimiento antes de TiposDeduccion (FK)
+-- ============================================================
+IF OBJECT_ID('sp_CargarCatalogos', 'P') IS NOT NULL DROP PROCEDURE sp_CargarCatalogos;
+GO
+CREATE PROCEDURE sp_CargarCatalogos @xmlData XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        EXEC sp_CargarTiposJornada    @xmlData;
+        EXEC sp_CargarPuestos         @xmlData;
+        EXEC sp_CargarFeriados        @xmlData;
+        EXEC sp_CargarTiposEvento     @xmlData;
+        EXEC sp_CargarTiposMovimiento @xmlData;      -- debe ir ANTES de TiposDeduccion
+        EXEC sp_CargarTiposDeduccion  @xmlData;      -- depende de dbo.TipoMovimiento (FK por nombre)
+        EXEC sp_CargarUsuariosAdmin   @xmlData;
+        EXEC sp_CargarCodigosError    @xmlData;
+
+        COMMIT TRANSACTION;
+        PRINT 'Carga de catálogos completada exitosamente.';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        DECLARE @err VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_CargarCatalogos: %s', 16, 1, @err);
+    END CATCH;
+END;
+GO
+
+PRINT 'SPs de catálogos creados exitosamente.';
+GO
