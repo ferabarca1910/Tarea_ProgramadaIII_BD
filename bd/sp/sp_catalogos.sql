@@ -69,3 +69,31 @@ BEGIN
     PRINT 'TiposDeMovimiento cargados.';
 END;
 GO
+-- ============================================================
+-- SP: Cargar TiposDeDeduccion
+-- FK a dbo.TipoMovimiento resuelta por nombre (atributo dbo.TipoMovimiento)
+-- Atributos: EsObligatoria, EsPorcentual (en lugar de Obligatorio/Porcentual)
+-- ============================================================
+IF OBJECT_ID('sp_CargarTiposDeduccion', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposDeduccion;
+GO
+CREATE PROCEDURE sp_CargarTiposDeduccion @xmlData XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.TipoDeduccion (IdTipoDeduccion, Nombre, EsObligatoria, EsPorcentual, Valor, IdTipoMovimiento)
+    SELECT
+        nodo.value('@Id',            'INT'),
+        nodo.value('@Nombre',        'VARCHAR(100)'),
+        nodo.value('@EsObligatoria', 'BIT'),
+        nodo.value('@EsPorcentual',  'BIT'),
+        nodo.value('@Valor',         'DECIMAL(10,4)'),
+        tm.IdTipoMovimiento
+    FROM @xmlData.nodes('/Catalogo/TiposDeDeduccion/TipoDeDeduccion') AS T(nodo)
+    INNER JOIN dbo.TipoMovimiento tm
+        ON tm.Nombre = nodo.value('@dbo.TipoMovimiento','VARCHAR(100)')
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dbo.TipoDeduccion WHERE IdTipoDeduccion = nodo.value('@Id','INT')
+    );
+    PRINT 'TiposDeDeduccion cargados.';
+END;
+GO
