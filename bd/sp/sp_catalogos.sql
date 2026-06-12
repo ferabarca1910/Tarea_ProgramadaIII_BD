@@ -97,3 +97,23 @@ BEGIN
     PRINT 'TiposDeDeduccion cargados.';
 END;
 GO
+-- ============================================================
+-- SP: Cargar TiposDeEvento (23 eventos)
+-- ============================================================
+IF OBJECT_ID('sp_CargarTiposEvento', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposEvento;
+GO
+CREATE PROCEDURE sp_CargarTiposEvento @xmlData XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.TipoEvento (IdTipoEvento, Nombre)
+    SELECT
+        nodo.value('@Id',     'INT'),
+        nodo.value('@Nombre', 'VARCHAR(100)')
+    FROM @xmlData.nodes('/Catalogo/TiposdeEvento/dbo.TipoEvento') AS T(nodo)
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dbo.TipoEvento WHERE IdTipoEvento = nodo.value('@Id','INT')
+    );
+    PRINT 'TiposDeEvento cargados.';
+END;
+GO
