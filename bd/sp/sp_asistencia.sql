@@ -195,4 +195,51 @@ BEGIN
     ELSE
         -- La fecha de inicio de horas extra ya es feriado/domingo
         SET @HorasExtraDobles = @MinutosExtra / 60;
- END;
+  END;
+         -- 6. Generar movimientos y acumular en planilla semanal
+    DECLARE @MontoOrdinario     DECIMAL(12,2) = @HorasOrdinarias    * @SalarioXHora;
+    DECLARE @MontoExtraNormal   DECIMAL(12,2) = @HorasExtraNormales * @SalarioXHora * 1.5;
+    DECLARE @MontoExtraDoble    DECIMAL(12,2) = @HorasExtraDobles   * @SalarioXHora * 2.0;
+
+    -- Movimiento horas ordinarias (IdTipoMovimiento = 1)
+    IF @HorasOrdinarias > 0
+        INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
+            VALUES (@IdPlanillaSemXEmpleado, 1, @IdMarca, @FechaEntrada, @HorasOrdinarias, @MontoOrdinario);
+
+        -- Movimiento horas extra normales (IdTipoMovimiento = 2)
+        IF @HorasExtraNormales > 0
+            INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
+            VALUES (@IdPlanillaSemXEmpleado, 2, @IdMarca, @FechaEntrada, @HorasExtraNormales, @MontoExtraNormal);
+
+        -- Movimiento horas extra dobles (IdTipoMovimiento = 3)
+        IF @HorasExtraDobles > 0
+            INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
+            VALUES (@IdPlanillaSemXEmpleado, 3, @IdMarca, @FechaEntrada, @HorasExtraDobles, @MontoExtraDoble);
+
+        -- 7. Acumular en dbo.PlanillaSemXEmpleado
+        UPDATE dbo.PlanillaSemXEmpleado
+        SET
+            SalarioBruto       = SalarioBruto       + @MontoOrdinario + @MontoExtraNormal + @MontoExtraDoble,
+            HorasOrdinarias    = HorasOrdinarias    + @HorasOrdinarias,
+            HorasExtraNormales = HorasExtraNormales + @HorasExtraNormales,
+            HorasExtraDobles   = HorasExtraDobles   + @HorasExtraDobles
+        WHERE IdPlanillaSemXEmpleado = @IdPlanillaSemXEmpleado;
+
+        -- 8. Marcar la marca como procesada
+        UPDATE dbo.MarcaAsistencia SET Procesada = 1 WHERE IdMarcaAsistencia = @IdMarca;
+
+        -- 9. Registrar en bitácora (evento tipo 14 = Ingreso marcas asistencia)
+        DECLARE @params NVARCHAR(500) = '{"empleado_doc":"' + @ValorDocumento +
+            '","entrada":"' + CONVERT(VARCHAR,@FechaHoraEntrada,120) +
+            '","salida":"'  + CONVERT(VARCHAR,@FechaHoraSalida,120)  + '"}';
+        EXEC sp_RegistrarEvento @IdUsuarioSistema, 22, @IPOrigen, @params;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_ProcesarAsistencia: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
