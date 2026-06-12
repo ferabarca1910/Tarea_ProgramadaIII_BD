@@ -140,3 +140,23 @@ BEGIN
     PRINT 'UsuariosAdministrador cargados.';
 END;
 GO
+-- ============================================================
+-- SP: Cargar Códigos de Error
+-- ============================================================
+IF OBJECT_ID('sp_CargarCodigosError', 'P') IS NOT NULL DROP PROCEDURE sp_CargarCodigosError;
+GO
+CREATE PROCEDURE sp_CargarCodigosError @xmlData XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.CodigoError (Codigo, Descripcion)
+    SELECT
+        nodo.value('@Codigo',      'INT'),
+        nodo.value('@Descripcion', 'VARCHAR(255)')
+    FROM @xmlData.nodes('/Catalogo/CodigosError/Error') AS T(nodo)
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dbo.CodigoError WHERE Codigo = nodo.value('@Codigo','INT')
+    );
+    PRINT 'CodigosError cargados.';
+END;
+GO
