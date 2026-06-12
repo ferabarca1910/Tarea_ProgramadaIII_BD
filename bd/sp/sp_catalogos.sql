@@ -117,3 +117,26 @@ BEGIN
     PRINT 'TiposDeEvento cargados.';
 END;
 GO
+-- ============================================================
+-- SP: Cargar Usuarios Administrador
+-- Id fijo del XML (no identity), campo Tipo = 1
+-- ============================================================
+IF OBJECT_ID('sp_CargarUsuariosAdmin', 'P') IS NOT NULL DROP PROCEDURE sp_CargarUsuariosAdmin;
+GO
+CREATE PROCEDURE sp_CargarUsuariosAdmin @xmlData XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.Usuario (IdUsuario, Username, PasswordHash, Tipo)
+    SELECT
+        nodo.value('@Id',       'INT'),
+        nodo.value('@Username', 'VARCHAR(50)'),
+        nodo.value('@pwd',      'VARCHAR(255)'),
+        1   -- tipo 1 = administrador
+    FROM @xmlData.nodes('/Catalogo/UsuariosAdministrador/dbo.Usuario') AS T(nodo)
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dbo.Usuario WHERE IdUsuario = nodo.value('@Id','INT')
+    );
+    PRINT 'UsuariosAdministrador cargados.';
+END;
+GO
