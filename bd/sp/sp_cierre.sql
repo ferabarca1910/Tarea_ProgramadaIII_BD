@@ -32,3 +32,13 @@ BEGIN
             RAISERROR('No hay semana planilla abierta que cierre el %s.', 16, 1, CONVERT(VARCHAR,@FechaJueves,103));
             ROLLBACK; RETURN;
         END;
+        -- 2. Obtener el mes planilla al que pertenece esta semana
+        DECLARE @IdMesPlanilla  INT;
+        DECLARE @CantidadJueves TINYINT;
+
+        SELECT
+            @IdMesPlanilla  = sp.IdMesPlanilla,
+            @CantidadJueves = mp.CantidadJueves
+        FROM dbo.SemanaPlanilla sp
+        INNER JOIN dbo.MesPlanilla mp ON sp.IdMesPlanilla = mp.IdMesPlanilla
+        WHERE sp.IdSemanaPlanilla = @IdSemanaPlanilla;
