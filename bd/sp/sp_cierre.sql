@@ -42,3 +42,27 @@ BEGIN
         FROM dbo.SemanaPlanilla sp
         INNER JOIN dbo.MesPlanilla mp ON sp.IdMesPlanilla = mp.IdMesPlanilla
         WHERE sp.IdSemanaPlanilla = @IdSemanaPlanilla;
+        -- 3. Procesar cada empleado activo con planilla semanal en esta semana
+        DECLARE @IdEmpleado             INT;
+        DECLARE @IdPlanillaSemXEmpleado INT;
+        DECLARE @SalarioBruto           DECIMAL(14,2);
+        DECLARE @TotalDeducciones       DECIMAL(14,2);
+
+        DECLARE cur_empleados CURSOR LOCAL FAST_FORWARD FOR
+            SELECT pse.IdPlanillaSemXEmpleado, pse.IdEmpleado, pse.SalarioBruto
+            FROM dbo.PlanillaSemXEmpleado pse
+            WHERE pse.IdSemanaPlanilla = @IdSemanaPlanilla
+              AND pse.Procesada = 0;
+
+        OPEN cur_empleados;
+        FETCH NEXT FROM cur_empleados INTO @IdPlanillaSemXEmpleado, @IdEmpleado, @SalarioBruto;
+
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            SET @TotalDeducciones = 0;
+
+            -- Obtener IdPlanillaMesXEmpleado
+            DECLARE @IdPlanillaMesXEmpleado INT;
+            SELECT @IdPlanillaMesXEmpleado = IdPlanillaMesXEmpleado
+            FROM dbo.PlanillaMesXEmpleado
+            WHERE IdMesPlanilla = @IdMesPlanilla AND IdEmpleado = @IdEmpleado;
