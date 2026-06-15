@@ -7,7 +7,7 @@ GO
 IF OBJECT_ID('sp_CierreSemanal', 'P') IS NOT NULL DROP PROCEDURE sp_CierreSemanal;
 GO
 CREATE PROCEDURE sp_CierreSemanal
-    @FechaJueves        DATE,           -- Fecha del jueves de cierre
+    @FechaJueves        DATE,           
     @IdUsuarioSistema   INT,
     @IPOrigen           VARCHAR(45) = '127.0.0.1'
 AS
