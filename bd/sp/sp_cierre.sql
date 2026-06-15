@@ -147,3 +147,10 @@ BEGIN
                 FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @MontoFijo;
             END;
             CLOSE cur_fija; DEALLOCATE cur_fija;
+            -- 3c. Actualizar planilla semanal del empleado
+            UPDATE dbo.PlanillaSemXEmpleado
+            SET
+                TotalDeducciones = @TotalDeducciones,
+                SalarioNeto      = SalarioBruto - @TotalDeducciones,
+                Procesada        = 1
+            WHERE IdPlanillaSemXEmpleado = @IdPlanillaSemXEmpleado;
