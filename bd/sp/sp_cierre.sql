@@ -168,3 +168,16 @@ BEGIN
             FETCH NEXT FROM cur_empleados INTO @IdPlanillaSemXEmpleado, @IdEmpleado, @SalarioBruto;
         END;
         CLOSE cur_empleados; DEALLOCATE cur_empleados;
+        -- 4. Cerrar la semana
+        UPDATE dbo.SemanaPlanilla SET Cerrada = 1 WHERE IdSemanaPlanilla = @IdSemanaPlanilla;
+
+        COMMIT TRANSACTION;
+        PRINT 'Cierre semanal del ' + CONVERT(VARCHAR,@FechaJueves,103) + ' completado.';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_CierreSemanal: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
