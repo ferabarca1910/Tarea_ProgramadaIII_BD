@@ -1,15 +1,9 @@
 -- ============================================================
--- SP_CIERRE: Cierre semanal, apertura de semana y apertura de mes
--- Se ejecutan cada jueves a medianoche
+-- SP_CIERRE
 -- ============================================================
 
 USE PlanillaObrera;
 GO
-
--- ============================================================
--- SP: Cierre semanal - aplica deducciones y calcula salario neto
--- Se llama cada jueves para la semana que TERMINA ese jueves.
--- ============================================================
 IF OBJECT_ID('sp_CierreSemanal', 'P') IS NOT NULL DROP PROCEDURE sp_CierreSemanal;
 GO
 CREATE PROCEDURE sp_CierreSemanal
@@ -21,7 +15,6 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
-        -- 1. Obtener la semana planilla que cierra en este jueves
         DECLARE @IdSemanaPlanilla INT;
         SELECT @IdSemanaPlanilla = IdSemanaPlanilla
         FROM dbo.SemanaPlanilla
@@ -32,7 +25,7 @@ BEGIN
             RAISERROR('No hay semana planilla abierta que cierre el %s.', 16, 1, CONVERT(VARCHAR,@FechaJueves,103));
             ROLLBACK; RETURN;
         END;
-        -- 2. Obtener el mes planilla al que pertenece esta semana
+
         DECLARE @IdMesPlanilla  INT;
         DECLARE @CantidadJueves TINYINT;
 
@@ -42,7 +35,7 @@ BEGIN
         FROM dbo.SemanaPlanilla sp
         INNER JOIN dbo.MesPlanilla mp ON sp.IdMesPlanilla = mp.IdMesPlanilla
         WHERE sp.IdSemanaPlanilla = @IdSemanaPlanilla;
-        -- 3. Procesar cada empleado activo con planilla semanal en esta semana
+
         DECLARE @IdEmpleado             INT;
         DECLARE @IdPlanillaSemXEmpleado INT;
         DECLARE @SalarioBruto           DECIMAL(14,2);
@@ -61,12 +54,12 @@ BEGIN
         BEGIN
             SET @TotalDeducciones = 0;
 
-            -- Obtener IdPlanillaMesXEmpleado
+            
             DECLARE @IdPlanillaMesXEmpleado INT;
             SELECT @IdPlanillaMesXEmpleado = IdPlanillaMesXEmpleado
             FROM dbo.PlanillaMesXEmpleado
             WHERE IdMesPlanilla = @IdMesPlanilla AND IdEmpleado = @IdEmpleado;
-            -- 3a. Deducciones PORCENTUALES (se aplican sobre el salario bruto semanal)
+            
             DECLARE @IdTipoDedPct   INT;
             DECLARE @PorcentajeDed  DECIMAL(10,4);
             DECLARE @MontoDed       DECIMAL(12,2);
@@ -88,12 +81,10 @@ BEGIN
                 SET @MontoDed = ROUND(@SalarioBruto * @PorcentajeDed, 2);
                 SET @TotalDeducciones = @TotalDeducciones + @MontoDed;
 
-                -- Movimiento débito (IdTipoMovimiento 4 en adelante según catálogo)
-                -- Usamos el IdTipoDeduccion+3 como convención inicial; ajustar según catálogo real
                 INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
                 VALUES (@IdPlanillaSemXEmpleado, @IdTipoDedPct + 3, NULL, @FechaJueves, 0, -@MontoDed);
 
-                -- Acumular en detalle mensual
+                
                 IF @IdPlanillaMesXEmpleado IS NOT NULL
                 BEGIN
                     IF EXISTS (SELECT 1 FROM dbo.DeduccionXEmpleadoXMes WHERE IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado AND IdTipoDeduccion = @IdTipoDedPct)
