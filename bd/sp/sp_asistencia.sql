@@ -1,22 +1,30 @@
+-- ============================================================
+-- SP_ASISTENCIA: Procesamiento de marcas de asistencia
+-- Calcula horas ordinarias, extras normales y extras dobles.
+-- ============================================================
 
 USE PlanillaObrera;
 GO
 
-
+-- ============================================================
+-- Función auxiliar: ¿Es feriado o domingo una fecha?
+-- ============================================================
 IF OBJECT_ID('dbo.fn_EsFeriadoODomingo', 'FN') IS NOT NULL DROP FUNCTION dbo.fn_EsFeriadoODomingo;
 GO
 CREATE FUNCTION dbo.fn_EsFeriadoODomingo(@fecha DATE)
 RETURNS BIT
 AS
 BEGIN
-    
-    IF DATEPART(WEEKDAY, @fecha) = 1  RETURN 1;  
+    -- DATEPART: 1=domingo, 7=sábado en SQL Server (datefirst=7 default)
+    IF DATEPART(WEEKDAY, @fecha) = 1  RETURN 1;  -- domingo
     IF EXISTS (SELECT 1 FROM dbo.Feriado WHERE Fecha = @fecha) RETURN 1;
     RETURN 0;
 END;
 GO
 
-
+-- ============================================================
+-- SP: Registrar bitácora (helper interno)
+-- ============================================================
 IF OBJECT_ID('sp_RegistrarEvento', 'P') IS NOT NULL DROP PROCEDURE sp_RegistrarEvento;
 GO
 CREATE PROCEDURE sp_RegistrarEvento
@@ -34,7 +42,14 @@ BEGIN
 END;
 GO
 
-
+-- ============================================================
+-- SP: Procesar una marca de asistencia individual
+-- Parámetros:
+--   @ValorDocumento  : cédula del empleado (mapeo desde XML)
+--   @FechaHoraEntrada / @FechaHoraSalida : DATETIME
+--   @IdUsuarioSistema: usuario del proceso de simulación
+--   @IPOrigen        : IP del proceso
+-- ============================================================
 IF OBJECT_ID('sp_ProcesarAsistencia', 'P') IS NOT NULL DROP PROCEDURE sp_ProcesarAsistencia;
 GO
 CREATE PROCEDURE sp_ProcesarAsistencia
@@ -49,7 +64,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-       
+        -- 1. Obtener datos del empleado
         DECLARE @IdEmpleado     INT;
         DECLARE @IdPuesto       INT;
         DECLARE @SalarioXHora   DECIMAL(10,2);
@@ -65,14 +80,17 @@ BEGIN
 
         IF @IdEmpleado IS NULL
         BEGIN
-            RAISERROR('dbo.Empleado con documento %s no encontrado.', 16, 1, @ValorDocumento);
+            RAISERROR('Empleado con documento %s no encontrado.', 16, 1, @ValorDocumento);
             ROLLBACK; RETURN;
         END;
 
-        
+        -- 2. Obtener jornada de la semana actual (la semana que contiene FechaEntrada)
         DECLARE @FechaEntrada   DATE = CAST(@FechaHoraEntrada AS DATE);
         DECLARE @IdTipoJornada  INT;
         DECLARE @HoraFinJornada TIME;
+
+        -- La semana inicia el viernes anterior o igual a la fecha
+        -- FechaInicioSemana = viernes <= @FechaEntrada más reciente
         SELECT TOP 1
             @IdTipoJornada  = jes.IdTipoJornada,
             @HoraFinJornada = tj.HoraFin
@@ -88,7 +106,7 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
-        
+        -- 3. Obtener la planilla semanal activa del empleado
         DECLARE @IdPlanillaSemXEmpleado INT;
 
         SELECT TOP 1 @IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado
@@ -105,48 +123,47 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
+        -- 4. Insertar marca de asistencia
         DECLARE @IdMarca INT;
-        INSERT INTO dbo.MarcaAsistencia (IdEmpleado, FechaHoraEntrada, FechaHoraSalida, Procesada)
-        VALUES (@IdEmpleado, @FechaHoraEntrada, @FechaHoraSalida, 0);
+        INSERT INTO dbo.MarcaAsistencia (IdEmpleado, FechaHoraEntrada, FechaHoraSalida, FechaOperacion)
+        VALUES (@IdEmpleado, @FechaHoraEntrada, @FechaHoraSalida, @FechaEntrada);
         SET @IdMarca = SCOPE_IDENTITY();
 
         DECLARE @FinJornadaDT DATETIME;
+
         SELECT @FinJornadaDT =
             CASE
-                WHEN tj.HoraFin <= tj.HoraInicio  
+                WHEN tj.HoraFin <= tj.HoraInicio  -- cruza medianoche
                     THEN CAST(DATEADD(DAY,1,@FechaEntrada) AS DATETIME) + CAST(tj.HoraFin AS DATETIME) - CAST('00:00:00' AS DATETIME)
                 ELSE
                     CAST(@FechaEntrada AS DATETIME) + CAST(tj.HoraFin AS DATETIME) - CAST('00:00:00' AS DATETIME)
             END
         FROM dbo.TipoJornada tj WHERE tj.IdTipoJornada = @IdTipoJornada;
 
-        
         DECLARE @MinutosTrabajados   INT = DATEDIFF(MINUTE, @FechaHoraEntrada, @FechaHoraSalida);
         DECLARE @MinutosJornada      INT = DATEDIFF(MINUTE, @FechaHoraEntrada, @FinJornadaDT);
         IF @MinutosJornada < 0 SET @MinutosJornada = 0;
 
-       
+  
         DECLARE @MinutosOrdinarios   INT = CASE WHEN @MinutosTrabajados <= @MinutosJornada THEN @MinutosTrabajados ELSE @MinutosJornada END;
         DECLARE @HorasOrdinarias     INT = @MinutosOrdinarios / 60;
 
-        
+  
         DECLARE @MinutosExtra        INT = CASE WHEN @MinutosTrabajados > @MinutosJornada THEN @MinutosTrabajados - @MinutosJornada ELSE 0 END;
 
         DECLARE @FechaExtra DATE = CAST(@FinJornadaDT AS DATE);
         DECLARE @EsFerODom  BIT  = dbo.fn_EsFeriadoODomingo(@FechaExtra);
 
-
-        
         DECLARE @HorasExtraNormales  INT = 0;
-        
+      
         DECLARE @HorasExtraDobles    INT = 0;
 
         IF @MinutosExtra > 0
         BEGIN
-            
+
             IF @EsFerODom = 0
             BEGIN
-                
+
                 DECLARE @MinHastaMedNoche INT = DATEDIFF(MINUTE, @FinJornadaDT,
                     CAST(CAST(DATEADD(DAY,1,CAST(@FinJornadaDT AS DATE)) AS VARCHAR(10)) AS DATETIME));
 
@@ -190,7 +207,7 @@ BEGIN
             INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
             VALUES (@IdPlanillaSemXEmpleado, 3, @IdMarca, @FechaEntrada, @HorasExtraDobles, @MontoExtraDoble);
 
-        
+       
         UPDATE dbo.PlanillaSemXEmpleado
         SET
             SalarioBruto       = SalarioBruto       + @MontoOrdinario + @MontoExtraNormal + @MontoExtraDoble,
@@ -199,10 +216,7 @@ BEGIN
             HorasExtraDobles   = HorasExtraDobles   + @HorasExtraDobles
         WHERE IdPlanillaSemXEmpleado = @IdPlanillaSemXEmpleado;
 
-        
-        UPDATE dbo.MarcaAsistencia SET Procesada = 1 WHERE IdMarcaAsistencia = @IdMarca;
-
-   
+       
         DECLARE @params NVARCHAR(500) = '{"empleado_doc":"' + @ValorDocumento +
             '","entrada":"' + CONVERT(VARCHAR,@FechaHoraEntrada,120) +
             '","salida":"'  + CONVERT(VARCHAR,@FechaHoraSalida,120)  + '"}';
@@ -212,6 +226,8 @@ BEGIN
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_ProcesarAsistencia', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
         DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
         RAISERROR('Error en sp_ProcesarAsistencia: %s', 16, 1, @msg);
     END CATCH;
