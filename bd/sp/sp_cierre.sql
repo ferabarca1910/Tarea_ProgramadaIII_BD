@@ -186,7 +186,6 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- Obtener el mes planilla que contiene esta semana
         DECLARE @IdMesPlanilla INT;
         SELECT @IdMesPlanilla = IdMesPlanilla
         FROM dbo.MesPlanilla
@@ -201,13 +200,13 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
-        -- Crear encabezado de semana
+
         DECLARE @IdSemanaPlanilla INT;
         INSERT INTO dbo.SemanaPlanilla (IdMesPlanilla, FechaInicio, FechaFin, Cerrada)
         VALUES (@IdMesPlanilla, @FechaInicioSemana, @FechaFinSemana, 0);
         SET @IdSemanaPlanilla = SCOPE_IDENTITY();
 
-        -- Crear dbo.PlanillaSemXEmpleado para todos los empleados activos
+
         INSERT INTO dbo.PlanillaSemXEmpleado (IdSemanaPlanilla, IdEmpleado, SalarioBruto, TotalDeducciones, SalarioNeto, HorasOrdinarias, HorasExtraNormales, HorasExtraDobles, Procesada)
         SELECT @IdSemanaPlanilla, IdEmpleado, 0, 0, 0, 0, 0, 0, 0
         FROM dbo.Empleado WHERE Activo = 1;
@@ -223,7 +222,7 @@ BEGIN
 END;
 GO
 -- ============================================================
--- SP: Calcular y registrar aguinaldo (se llama en el 2do lunes de diciembre)
+-- SP: Calcular y registrar aguinaldo 
 -- ============================================================
 IF OBJECT_ID('sp_CalcularAguinaldo', 'P') IS NOT NULL DROP PROCEDURE sp_CalcularAguinaldo;
 GO
@@ -236,9 +235,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- Salario bruto mensual acumulado: desde el mes que inicia en diciembre del año anterior
-        -- hasta el mes que termina en noviembre del año actual
-        -- El período es los 12 meses del ciclo planilla dic-nov
+
         DECLARE @FechaInicioPeríodo DATE = CAST(CAST(@Anio-1 AS VARCHAR) + '-12-01' AS DATE);
         DECLARE @FechaFinPeríodo    DATE = CAST(CAST(@Anio   AS VARCHAR) + '-11-30' AS DATE);
 
