@@ -190,4 +190,126 @@ BEGIN
     EXEC sp_RegistrarEvento @IdUsuario, 21, @IPOrigen, @params;
 END;
 GO
-  
+
+IF OBJECT_ID('sp_DetalleDeduccionesMensuales', 'P') IS NOT NULL DROP PROCEDURE sp_DetalleDeduccionesMensuales;
+GO
+CREATE PROCEDURE sp_DetalleDeduccionesMensuales
+    @IdPlanillaMesXEmpleado INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+ 
+    SELECT
+        td.Nombre               AS NombreDeduccion,
+        td.EsPorcentual,
+        CASE WHEN td.EsPorcentual = 1 THEN td.Valor * 100 ELSE NULL END AS Porcentaje,
+        dxm.MontoTotal
+    FROM dbo.DeduccionXEmpleadoXMes dxm
+    INNER JOIN dbo.TipoDeduccion td ON dxm.IdTipoDeduccion = td.IdTipoDeduccion
+    WHERE dxm.IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado
+    ORDER BY td.Nombre;
+END;
+GO
+ 
+
+IF OBJECT_ID('sp_InsertarEmpleado', 'P') IS NOT NULL DROP PROCEDURE sp_InsertarEmpleado;
+GO
+CREATE PROCEDURE sp_InsertarEmpleado
+    @Nombre             VARCHAR(150),
+    @ValorDocumento     VARCHAR(30),
+    @NombrePuesto       VARCHAR(100),  
+    @Username           VARCHAR(50),
+    @Password           VARCHAR(255),
+    @CuentaBancaria     VARCHAR(30) = NULL,
+    @FechaIngreso       DATE,
+    @IdUsuarioAdmin     INT,
+    @IPOrigen           VARCHAR(45),
+    @IdEmpleadoNuevo    INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @IdPuesto INT;
+        SELECT @IdPuesto = IdPuesto FROM dbo.Puesto WHERE Nombre = @NombrePuesto;
+        IF @IdPuesto IS NULL
+        BEGIN
+            RAISERROR('Puesto "%s" no encontrado.', 16, 1, @NombrePuesto);
+            ROLLBACK; RETURN;
+        END;
+ 
+
+        DECLARE @IdUsuarioEmp INT;
+        SELECT @IdUsuarioEmp = ISNULL(MAX(IdUsuario), 0) + 1 FROM dbo.Usuario;
+        INSERT INTO dbo.Usuario (IdUsuario, Username, PasswordHash, Tipo)
+        VALUES (@IdUsuarioEmp, @Username, @Password, 2);
+ 
+
+        INSERT INTO dbo.Empleado (Nombre, ValorDocumentoIdentidad, IdPuesto, IdUsuario, CuentaBancaria, FechaIngreso, Activo)
+        VALUES (@Nombre, @ValorDocumento, @IdPuesto, @IdUsuarioEmp, @CuentaBancaria, @FechaIngreso, 1);
+        SET @IdEmpleadoNuevo = SCOPE_IDENTITY();
+ 
+
+        DECLARE @datos NVARCHAR(MAX) = N'{"nombre":"' + @Nombre + '","doc":"' + @ValorDocumento +
+            '","puesto":"' + @NombrePuesto + '","fecha_ingreso":"' + CONVERT(VARCHAR,@FechaIngreso,103) + '"}';
+        EXEC sp_RegistrarEvento @IdUsuarioAdmin, 6, @IPOrigen, NULL, NULL, @datos;
+ 
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_InsertarEmpleado', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_InsertarEmpleado: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
+ 
+IF OBJECT_ID('sp_EditarEmpleado', 'P') IS NOT NULL DROP PROCEDURE sp_EditarEmpleado;
+GO
+CREATE PROCEDURE sp_EditarEmpleado
+    @IdEmpleado         INT,
+    @Nombre             VARCHAR(150),
+    @NombrePuesto       VARCHAR(100),
+    @CuentaBancaria     VARCHAR(30) = NULL,
+    @IdUsuarioAdmin     INT,
+    @IPOrigen           VARCHAR(45)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @antes NVARCHAR(MAX);
+        SELECT @antes = N'{"nombre":"' + Nombre + '","cuenta":"' + ISNULL(CuentaBancaria,'') + '"}'
+        FROM dbo.Empleado WHERE IdEmpleado = @IdEmpleado;
+ 
+        DECLARE @IdPuesto INT;
+        SELECT @IdPuesto = IdPuesto FROM dbo.Puesto WHERE Nombre = @NombrePuesto;
+ 
+        UPDATE dbo.Empleado
+        SET Nombre         = @Nombre,
+            IdPuesto       = ISNULL(@IdPuesto, IdPuesto),
+            CuentaBancaria = @CuentaBancaria
+        WHERE IdEmpleado = @IdEmpleado;
+ 
+        DECLARE @despues NVARCHAR(MAX);
+        SELECT @despues = N'{"nombre":"' + Nombre + '","cuenta":"' + ISNULL(CuentaBancaria,'') + '"}'
+        FROM dbo.Empleado WHERE IdEmpleado = @IdEmpleado;
+ 
+        EXEC sp_RegistrarEvento @IdUsuarioAdmin, 8, @IPOrigen,
+            N'{"empleado_id":' + CAST(@IdEmpleado AS VARCHAR) + '}',
+            @antes, @despues;
+ 
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_EditarEmpleado', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_EditarEmpleado: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
+   
