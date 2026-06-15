@@ -1,13 +1,19 @@
 -- ============================================================
--- SP_CIERRE
+-- SP_CIERRE: Cierre semanal, apertura de semana y apertura de mes
+-- Se ejecutan cada jueves a medianoche
 -- ============================================================
 
 USE PlanillaObrera;
 GO
+
+-- ============================================================
+-- SP: Cierre semanal - aplica deducciones y calcula salario neto
+-- Se llama cada jueves para la semana que TERMINA ese jueves.
+-- ============================================================
 IF OBJECT_ID('sp_CierreSemanal', 'P') IS NOT NULL DROP PROCEDURE sp_CierreSemanal;
 GO
 CREATE PROCEDURE sp_CierreSemanal
-    @FechaJueves        DATE,           
+    @FechaJueves        DATE,           -- Fecha del jueves de cierre
     @IdUsuarioSistema   INT,
     @IPOrigen           VARCHAR(45) = '127.0.0.1'
 AS
@@ -15,6 +21,8 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
+
+        -- 1. Obtener la semana planilla que cierra en este jueves
         DECLARE @IdSemanaPlanilla INT;
         SELECT @IdSemanaPlanilla = IdSemanaPlanilla
         FROM dbo.SemanaPlanilla
@@ -26,6 +34,7 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
+        -- 2. Obtener el mes planilla al que pertenece esta semana
         DECLARE @IdMesPlanilla  INT;
         DECLARE @CantidadJueves TINYINT;
 
@@ -36,6 +45,7 @@ BEGIN
         INNER JOIN dbo.MesPlanilla mp ON sp.IdMesPlanilla = mp.IdMesPlanilla
         WHERE sp.IdSemanaPlanilla = @IdSemanaPlanilla;
 
+        -- 3. Procesar cada empleado activo con planilla semanal en esta semana
         DECLARE @IdEmpleado             INT;
         DECLARE @IdPlanillaSemXEmpleado INT;
         DECLARE @SalarioBruto           DECIMAL(14,2);
@@ -44,8 +54,7 @@ BEGIN
         DECLARE cur_empleados CURSOR LOCAL FAST_FORWARD FOR
             SELECT pse.IdPlanillaSemXEmpleado, pse.IdEmpleado, pse.SalarioBruto
             FROM dbo.PlanillaSemXEmpleado pse
-            WHERE pse.IdSemanaPlanilla = @IdSemanaPlanilla
-              AND pse.Procesada = 0;
+            WHERE pse.IdSemanaPlanilla = @IdSemanaPlanilla;
 
         OPEN cur_empleados;
         FETCH NEXT FROM cur_empleados INTO @IdPlanillaSemXEmpleado, @IdEmpleado, @SalarioBruto;
@@ -54,12 +63,13 @@ BEGIN
         BEGIN
             SET @TotalDeducciones = 0;
 
-            
+            -- Obtener IdPlanillaMesXEmpleado
             DECLARE @IdPlanillaMesXEmpleado INT;
             SELECT @IdPlanillaMesXEmpleado = IdPlanillaMesXEmpleado
             FROM dbo.PlanillaMesXEmpleado
             WHERE IdMesPlanilla = @IdMesPlanilla AND IdEmpleado = @IdEmpleado;
-            
+
+            -- 3a. Deducciones PORCENTUALES (se aplican sobre el salario bruto semanal)
             DECLARE @IdTipoDedPct   INT;
             DECLARE @PorcentajeDed  DECIMAL(10,4);
             DECLARE @MontoDed       DECIMAL(12,2);
@@ -70,7 +80,7 @@ BEGIN
                 FROM dbo.DeduccionEmpleado de
                 INNER JOIN dbo.TipoDeduccion td ON de.IdTipoDeduccion = td.IdTipoDeduccion
                 WHERE de.IdEmpleado       = @IdEmpleado
-                  AND td.Porcentual       = 1
+                  AND td.EsPorcentual     = 1
                   AND de.FechaInicio     <= @FechaJueves
                   AND (de.FechaFin IS NULL OR de.FechaFin >= @FechaJueves);
 
@@ -81,10 +91,12 @@ BEGIN
                 SET @MontoDed = ROUND(@SalarioBruto * @PorcentajeDed, 2);
                 SET @TotalDeducciones = @TotalDeducciones + @MontoDed;
 
+                -- Movimiento débito (IdTipoMovimiento 4 en adelante según catálogo)
+                -- Usamos el IdTipoDeduccion+3 como convención inicial; ajustar según catálogo real
                 INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
                 VALUES (@IdPlanillaSemXEmpleado, @IdTipoDedPct + 3, NULL, @FechaJueves, 0, -@MontoDed);
 
-                
+                -- Acumular en detalle mensual
                 IF @IdPlanillaMesXEmpleado IS NOT NULL
                 BEGIN
                     IF EXISTS (SELECT 1 FROM dbo.DeduccionXEmpleadoXMes WHERE IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado AND IdTipoDeduccion = @IdTipoDedPct)
@@ -99,26 +111,27 @@ BEGIN
                 FETCH NEXT FROM cur_pct INTO @IdTipoDedPct, @PorcentajeDed;
             END;
             CLOSE cur_pct; DEALLOCATE cur_pct;
-        
+
+            -- 3b. Deducciones FIJAS (monto mensual dividido entre 4 o 5 jueves)
             DECLARE @IdTipoDedFija  INT;
-            DECLARE @MontoFijo      DECIMAL(12,2);
+            DECLARE @ValorDed      DECIMAL(12,2);
             DECLARE @MontoSemanal   DECIMAL(12,2);
 
             DECLARE cur_fija CURSOR LOCAL FAST_FORWARD FOR
-                SELECT de.IdTipoDeduccion, de.MontoFijo
+                SELECT de.IdTipoDeduccion, de.Valor
                 FROM dbo.DeduccionEmpleado de
                 INNER JOIN dbo.TipoDeduccion td ON de.IdTipoDeduccion = td.IdTipoDeduccion
                 WHERE de.IdEmpleado       = @IdEmpleado
-                  AND td.Porcentual       = 0
-                  AND de.MontoFijo        > 0
+                  AND td.EsPorcentual     = 0
+                  AND de.Valor        > 0
                   AND de.FechaInicio     <= @FechaJueves
                   AND (de.FechaFin IS NULL OR de.FechaFin >= @FechaJueves);
 
             OPEN cur_fija;
-            FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @MontoFijo;
+            FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @ValorDed;
             WHILE @@FETCH_STATUS = 0
             BEGIN
-                SET @MontoSemanal = ROUND(@MontoFijo / @CantidadJueves, 2);
+                SET @MontoSemanal = ROUND(@ValorDed / @CantidadJueves, 2);
                 SET @TotalDeducciones = @TotalDeducciones + @MontoSemanal;
 
                 INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
@@ -135,17 +148,18 @@ BEGIN
                         VALUES (@IdPlanillaMesXEmpleado, @IdTipoDedFija, @MontoSemanal);
                 END;
 
-                FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @MontoFijo;
+                FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @ValorDed;
             END;
             CLOSE cur_fija; DEALLOCATE cur_fija;
-           
+
+            -- 3c. Actualizar planilla semanal del empleado
             UPDATE dbo.PlanillaSemXEmpleado
             SET
                 TotalDeducciones = @TotalDeducciones,
-                SalarioNeto      = SalarioBruto - @TotalDeducciones,
-                Procesada        = 1
+                SalarioNeto      = SalarioBruto - @TotalDeducciones
             WHERE IdPlanillaSemXEmpleado = @IdPlanillaSemXEmpleado;
 
+            -- 3d. Acumular en planilla mensual del empleado
             IF @IdPlanillaMesXEmpleado IS NOT NULL
             BEGIN
                 UPDATE dbo.PlanillaMesXEmpleado
@@ -159,7 +173,8 @@ BEGIN
             FETCH NEXT FROM cur_empleados INTO @IdPlanillaSemXEmpleado, @IdEmpleado, @SalarioBruto;
         END;
         CLOSE cur_empleados; DEALLOCATE cur_empleados;
-        
+
+        -- 4. Cerrar la semana
         UPDATE dbo.SemanaPlanilla SET Cerrada = 1 WHERE IdSemanaPlanilla = @IdSemanaPlanilla;
 
         COMMIT TRANSACTION;
@@ -167,13 +182,58 @@ BEGIN
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CierreSemanal', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
         DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
         RAISERROR('Error en sp_CierreSemanal: %s', 16, 1, @msg);
     END CATCH;
 END;
 GO
+
 -- ============================================================
--- SP: AperturaSemana
+-- SP: Apertura de nuevo mes planilla
+-- Se llama cuando el jueves actual es el último del mes
+-- (el día siguiente viernes es el primer viernes del próximo mes)
+-- ============================================================
+IF OBJECT_ID('sp_AperturaMes', 'P') IS NOT NULL DROP PROCEDURE sp_AperturaMes;
+GO
+CREATE PROCEDURE sp_AperturaMes
+    @FechaInicioMes     DATE,   -- El viernes que inicia el nuevo mes planilla
+    @FechaFinMes        DATE,   -- El último jueves del nuevo mes planilla
+    @CantidadJueves     TINYINT -- 4 o 5
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Crear encabezado del mes
+        DECLARE @IdMesPlanilla INT;
+        INSERT INTO dbo.MesPlanilla (FechaInicio, FechaFin, CantidadJueves, Cerrado)
+        VALUES (@FechaInicioMes, @FechaFinMes, @CantidadJueves, 0);
+        SET @IdMesPlanilla = SCOPE_IDENTITY();
+
+        -- Crear dbo.PlanillaMesXEmpleado para todos los empleados activos
+        INSERT INTO dbo.PlanillaMesXEmpleado (IdMesPlanilla, IdEmpleado, SalarioBrutoMensual, TotalDeduccionesMensual, SalarioNetoMensual)
+        SELECT @IdMesPlanilla, IdEmpleado, 0, 0, 0
+        FROM dbo.Empleado WHERE Activo = 1;
+
+        COMMIT TRANSACTION;
+        PRINT 'Apertura de mes planilla completada. IdMesPlanilla=' + CAST(@IdMesPlanilla AS VARCHAR);
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_AperturaMes', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_AperturaMes: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
+
+-- ============================================================
+-- SP: Apertura de nueva semana planilla
+-- Se llama cada jueves para preparar la semana siguiente (viernes → jueves)
 -- ============================================================
 IF OBJECT_ID('sp_AperturaSemana', 'P') IS NOT NULL DROP PROCEDURE sp_AperturaSemana;
 GO
@@ -186,6 +246,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
+        -- Obtener el mes planilla que contiene esta semana
         DECLARE @IdMesPlanilla INT;
         SELECT @IdMesPlanilla = IdMesPlanilla
         FROM dbo.MesPlanilla
@@ -200,15 +261,15 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
-
+        -- Crear encabezado de semana
         DECLARE @IdSemanaPlanilla INT;
         INSERT INTO dbo.SemanaPlanilla (IdMesPlanilla, FechaInicio, FechaFin, Cerrada)
         VALUES (@IdMesPlanilla, @FechaInicioSemana, @FechaFinSemana, 0);
         SET @IdSemanaPlanilla = SCOPE_IDENTITY();
 
-
-        INSERT INTO dbo.PlanillaSemXEmpleado (IdSemanaPlanilla, IdEmpleado, SalarioBruto, TotalDeducciones, SalarioNeto, HorasOrdinarias, HorasExtraNormales, HorasExtraDobles, Procesada)
-        SELECT @IdSemanaPlanilla, IdEmpleado, 0, 0, 0, 0, 0, 0, 0
+        -- Crear dbo.PlanillaSemXEmpleado para todos los empleados activos
+        INSERT INTO dbo.PlanillaSemXEmpleado (IdSemanaPlanilla, IdEmpleado, SalarioBruto, TotalDeducciones, SalarioNeto, HorasOrdinarias, HorasExtraNormales, HorasExtraDobles)
+        SELECT @IdSemanaPlanilla, IdEmpleado, 0, 0, 0, 0, 0, 0
         FROM dbo.Empleado WHERE Activo = 1;
 
         COMMIT TRANSACTION;
@@ -216,13 +277,56 @@ BEGIN
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_AperturaSemana', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
         DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
         RAISERROR('Error en sp_AperturaSemana: %s', 16, 1, @msg);
     END CATCH;
 END;
 GO
+
 -- ============================================================
--- SP: Calcular y registrar aguinaldo 
+-- SP: Asignar jornada de la próxima semana a un empleado
+-- ============================================================
+IF OBJECT_ID('sp_AsignarJornada', 'P') IS NOT NULL DROP PROCEDURE sp_AsignarJornada;
+GO
+CREATE PROCEDURE sp_AsignarJornada
+    @ValorDocumento     VARCHAR(30),
+    @IdTipoJornada      INT,
+    @FechaInicioSemana  DATE,
+    @IdUsuarioSistema   INT,
+    @IPOrigen           VARCHAR(45) = '127.0.0.1'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @IdEmpleado INT;
+    SELECT @IdEmpleado = IdEmpleado FROM dbo.Empleado WHERE ValorDocumento = @ValorDocumento AND Activo = 1;
+
+    IF @IdEmpleado IS NULL
+    BEGIN
+        RAISERROR('Empleado con documento %s no encontrado.', 16, 1, @ValorDocumento);
+        RETURN;
+    END;
+
+    -- Insertar o actualizar jornada
+    IF EXISTS (SELECT 1 FROM dbo.JornadaEmpleadoSemana WHERE IdEmpleado = @IdEmpleado AND FechaInicioSemana = @FechaInicioSemana)
+        UPDATE dbo.JornadaEmpleadoSemana
+        SET IdTipoJornada = @IdTipoJornada
+        WHERE IdEmpleado = @IdEmpleado AND FechaInicioSemana = @FechaInicioSemana;
+    ELSE
+        INSERT INTO dbo.JornadaEmpleadoSemana (IdEmpleado, IdTipoJornada, FechaInicioSemana)
+        VALUES (@IdEmpleado, @IdTipoJornada, @FechaInicioSemana);
+
+    -- Registrar bitácora (evento 15 = Ingreso nuevas jornadas)
+    DECLARE @params NVARCHAR(300) = '{"empleado_id":' + CAST(@IdEmpleado AS VARCHAR) +
+        ',"tipo_jornada_id":' + CAST(@IdTipoJornada AS VARCHAR) +
+        ',"semana_inicio":"' + CONVERT(VARCHAR,@FechaInicioSemana,103) + '"}';
+    EXEC sp_RegistrarEvento @IdUsuarioSistema, 23, @IPOrigen, @params;
+END;
+GO
+
+-- ============================================================
+-- SP: Calcular y registrar aguinaldo (se llama en el 2do lunes de diciembre)
 -- ============================================================
 IF OBJECT_ID('sp_CalcularAguinaldo', 'P') IS NOT NULL DROP PROCEDURE sp_CalcularAguinaldo;
 GO
@@ -234,8 +338,6 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
-
-
         DECLARE @FechaInicioPeríodo DATE = CAST(CAST(@Anio-1 AS VARCHAR) + '-12-01' AS DATE);
         DECLARE @FechaFinPeríodo    DATE = CAST(CAST(@Anio   AS VARCHAR) + '-11-30' AS DATE);
 
@@ -253,10 +355,12 @@ BEGIN
         HAVING NOT EXISTS (SELECT 1 FROM dbo.Aguinaldo ag WHERE ag.IdEmpleado = pme.IdEmpleado AND ag.Anio = @Anio);
 
         COMMIT TRANSACTION;
-        PRINT 'dbo.Aguinaldo ' + CAST(@Anio AS VARCHAR) + ' calculado.';
+        PRINT 'Aguinaldo ' + CAST(@Anio AS VARCHAR) + ' calculado.';
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CalcularAguinaldo', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
         DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
         RAISERROR('Error en sp_CalcularAguinaldo: %s', 16, 1, @msg);
     END CATCH;
