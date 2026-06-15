@@ -108,3 +108,42 @@ BEGIN
                 FETCH NEXT FROM cur_pct INTO @IdTipoDedPct, @PorcentajeDed;
             END;
             CLOSE cur_pct; DEALLOCATE cur_pct;
+            -- 3b. Deducciones FIJAS (monto mensual dividido entre 4 o 5 jueves)
+            DECLARE @IdTipoDedFija  INT;
+            DECLARE @MontoFijo      DECIMAL(12,2);
+            DECLARE @MontoSemanal   DECIMAL(12,2);
+
+            DECLARE cur_fija CURSOR LOCAL FAST_FORWARD FOR
+                SELECT de.IdTipoDeduccion, de.MontoFijo
+                FROM dbo.DeduccionEmpleado de
+                INNER JOIN dbo.TipoDeduccion td ON de.IdTipoDeduccion = td.IdTipoDeduccion
+                WHERE de.IdEmpleado       = @IdEmpleado
+                  AND td.Porcentual       = 0
+                  AND de.MontoFijo        > 0
+                  AND de.FechaInicio     <= @FechaJueves
+                  AND (de.FechaFin IS NULL OR de.FechaFin >= @FechaJueves);
+
+            OPEN cur_fija;
+            FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @MontoFijo;
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                SET @MontoSemanal = ROUND(@MontoFijo / @CantidadJueves, 2);
+                SET @TotalDeducciones = @TotalDeducciones + @MontoSemanal;
+
+                INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
+                VALUES (@IdPlanillaSemXEmpleado, @IdTipoDedFija + 3, NULL, @FechaJueves, 0, -@MontoSemanal);
+
+                IF @IdPlanillaMesXEmpleado IS NOT NULL
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM dbo.DeduccionXEmpleadoXMes WHERE IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado AND IdTipoDeduccion = @IdTipoDedFija)
+                        UPDATE dbo.DeduccionXEmpleadoXMes
+                        SET MontoTotal = MontoTotal + @MontoSemanal
+                        WHERE IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado AND IdTipoDeduccion = @IdTipoDedFija;
+                    ELSE
+                        INSERT INTO dbo.DeduccionXEmpleadoXMes (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
+                        VALUES (@IdPlanillaMesXEmpleado, @IdTipoDedFija, @MontoSemanal);
+                END;
+
+                FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @MontoFijo;
+            END;
+            CLOSE cur_fija; DEALLOCATE cur_fija;
