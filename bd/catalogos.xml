@@ -1,0 +1,124 @@
+<Datos>
+<!--
+ =====================================================
+        PUESTOS (sin Id — IDENTITY genera la PK, mapeo por Nombre)
+    ====================================================== 
+-->
+<Puestos>
+<Puesto Nombre="Electricista" SalarioXHora="1200.00"/>
+<Puesto Nombre="Auxiliar de Laboratorio" SalarioXHora="1250.00"/>
+<Puesto Nombre="Operador de Maquina" SalarioXHora="1025.00"/>
+<Puesto Nombre="Cajero" SalarioXHora="1100.00"/>
+<Puesto Nombre="Camarero" SalarioXHora="1000.00"/>
+<Puesto Nombre="Conductor" SalarioXHora="1500.00"/>
+<Puesto Nombre="Asistente" SalarioXHora="1100.00"/>
+<Puesto Nombre="Recepcionista" SalarioXHora="1200.00"/>
+<Puesto Nombre="Fontanero" SalarioXHora="1300.00"/>
+<Puesto Nombre="Albanil" SalarioXHora="1050.00"/>
+</Puestos>
+<!--
+ =====================================================
+        TIPOS DE JORNADA (Id del XML, NO identity)
+    ====================================================== 
+-->
+<TiposJornada>
+<TipoJornada Id="1" Nombre="Diurno" HoraInicio="06:00:00" HoraFin="14:00:00"/>
+<TipoJornada Id="2" Nombre="Vespertino" HoraInicio="14:00:00" HoraFin="22:00:00"/>
+<TipoJornada Id="3" Nombre="Nocturno" HoraInicio="22:00:00" HoraFin="06:00:00"/>
+</TiposJornada>
+<!--
+ =====================================================
+        FERIADOS (Id del XML, NO identity)
+    ====================================================== 
+-->
+<Feriados>
+<Feriado Id="1" Nombre="Dia de Juan Santamaria" Fecha="2026-04-11"/>
+<Feriado Id="2" Nombre="Jueves Santo" Fecha="2026-04-16"/>
+<Feriado Id="3" Nombre="Viernes Santo" Fecha="2026-04-17"/>
+<Feriado Id="4" Nombre="Dia del trabajo" Fecha="2026-05-01"/>
+<Feriado Id="5" Nombre="Anexion del Nicoya" Fecha="2026-07-25"/>
+<Feriado Id="6" Nombre="Dia de la Virgen de los Angeles" Fecha="2026-08-02"/>
+<Feriado Id="7" Nombre="Dia de la Independencia" Fecha="2026-09-15"/>
+<Feriado Id="8" Nombre="Dia de las Culturas" Fecha="2026-10-12"/>
+<Feriado Id="9" Nombre="Navidad" Fecha="2026-12-25"/>
+</Feriados>
+<!--
+ =====================================================
+        TIPOS DE EVENTO (Id del XML, NO identity)
+    ====================================================== 
+-->
+<TiposEvento>
+<TipoEvento Id="1" Nombre="Login Exitoso"/>
+<TipoEvento Id="2" Nombre="Login No Exitoso"/>
+<TipoEvento Id="3" Nombre="Login deshabilitado"/>
+<TipoEvento Id="4" Nombre="Logout"/>
+<TipoEvento Id="5" Nombre="Insercion no exitosa"/>
+<TipoEvento Id="6" Nombre="Insercion exitosa"/>
+<TipoEvento Id="7" Nombre="Update no exitoso"/>
+<TipoEvento Id="8" Nombre="Update exitoso"/>
+<TipoEvento Id="9" Nombre="Intento de borrado"/>
+<TipoEvento Id="10" Nombre="Borrado exitoso"/>
+<TipoEvento Id="11" Nombre="Consulta con filtro de nombre"/>
+<TipoEvento Id="12" Nombre="Consulta con filtro de cedula"/>
+<TipoEvento Id="13" Nombre="Intento de insertar movimiento"/>
+<TipoEvento Id="14" Nombre="Insertar movimiento exitoso"/>
+</TiposEvento>
+<!--
+ =====================================================
+        TIPOS DE MOVIMIENTO (Id del XML, NO identity)
+        Accion: C=Credito, D=Debito
+    ====================================================== 
+-->
+<TiposMovimiento>
+<TipoMovimiento Id="1" Nombre="Credito Horas Ordinarias" Accion="C"/>
+<TipoMovimiento Id="2" Nombre="Credito Horas Extra Normales" Accion="C"/>
+<TipoMovimiento Id="3" Nombre="Credito Horas Extra Dobles" Accion="C"/>
+<TipoMovimiento Id="4" Nombre="Caja" Accion="C"/>
+<TipoMovimiento Id="5" Nombre="Debito CCSS" Accion="D"/>
+<TipoMovimiento Id="6" Nombre="Debito Asociacion Solidarista" Accion="D"/>
+<TipoMovimiento Id="7" Nombre="Debito Ahorro Obligatorio" Accion="D"/>
+<TipoMovimiento Id="8" Nombre="Debito Pension Alimenticia" Accion="D"/>
+</TiposMovimiento>
+<!--
+ =====================================================
+        TIPOS DE DEDUCCION (Id del XML, NO identity)
+        EsObligatoria/EsPorcentual: 0=No, 1=Si
+        TipoMovimiento: Nombre del TipoMovimiento asociado (FK lookup)
+    ====================================================== 
+-->
+<TiposDeduccion>
+<TipoDeduccion Id="1" Nombre="Obligatorio de Ley" EsObligatoria="1" EsPorcentual="1" Valor="0.0950" TipoMovimiento="Debito CCSS"/>
+<TipoDeduccion Id="2" Nombre="Ahorro Asociacion Solidarista" EsObligatoria="0" EsPorcentual="1" Valor="0.0500" TipoMovimiento="Debito Asociacion Solidarista"/>
+<TipoDeduccion Id="3" Nombre="Ahorro Vacacional" EsObligatoria="0" EsPorcentual="0" Valor="0.0000" TipoMovimiento="Debito Ahorro Obligatorio"/>
+<TipoDeduccion Id="4" Nombre="Pension Alimenticia" EsObligatoria="0" EsPorcentual="0" Valor="0.0000" TipoMovimiento="Debito Pension Alimenticia"/>
+</TiposDeduccion>
+<!--
+ =====================================================
+        USUARIOS (Id del XML, NO identity)
+        Tipo: 1=Administrador, 2=Empleado
+    ====================================================== 
+-->
+<Usuarios>
+<Usuario Id="1" Username="admin" PasswordHash="admin123" Tipo="1"/>
+<Usuario Id="2" Username="Goku" PasswordHash="1234" Tipo="1"/>
+<Usuario Id="3" Username="Willy" PasswordHash="1234" Tipo="1"/>
+</Usuarios>
+<!--
+ =====================================================
+        CODIGOS DE ERROR (Codigo del XML, PK directa)
+    ====================================================== 
+-->
+<Error>
+<error Codigo="50001" Descripcion="Username no existe"/>
+<error Codigo="50002" Descripcion="Password no existe"/>
+<error Codigo="50003" Descripcion="Login deshabilitado"/>
+<error Codigo="50004" Descripcion="Empleado con ValorDocumentoIdentidad ya existe en insercion"/>
+<error Codigo="50005" Descripcion="Empleado con mismo nombre ya existe en insercion"/>
+<error Codigo="50006" Descripcion="Empleado con ValorDocumentoIdentidad ya existe en actualizacion"/>
+<error Codigo="50007" Descripcion="Empleado con mismo nombre ya existe en actualizacion"/>
+<error Codigo="50008" Descripcion="Error de base de datos"/>
+<error Codigo="50009" Descripcion="Nombre de empleado no alfabetico"/>
+<error Codigo="50010" Descripcion="Valor de documento de identidad no alfabetico"/>
+<error Codigo="50011" Descripcion="Monto del movimiento rechazado pues si se aplicar el saldo seria negativo."/>
+</Error>
+</Datos>
