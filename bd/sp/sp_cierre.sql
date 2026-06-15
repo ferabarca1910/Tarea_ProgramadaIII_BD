@@ -99,7 +99,7 @@ BEGIN
                 FETCH NEXT FROM cur_pct INTO @IdTipoDedPct, @PorcentajeDed;
             END;
             CLOSE cur_pct; DEALLOCATE cur_pct;
-            -- 3b. Deducciones FIJAS (monto mensual dividido entre 4 o 5 jueves)
+        
             DECLARE @IdTipoDedFija  INT;
             DECLARE @MontoFijo      DECIMAL(12,2);
             DECLARE @MontoSemanal   DECIMAL(12,2);
@@ -138,14 +138,14 @@ BEGIN
                 FETCH NEXT FROM cur_fija INTO @IdTipoDedFija, @MontoFijo;
             END;
             CLOSE cur_fija; DEALLOCATE cur_fija;
-            -- 3c. Actualizar planilla semanal del empleado
+           
             UPDATE dbo.PlanillaSemXEmpleado
             SET
                 TotalDeducciones = @TotalDeducciones,
                 SalarioNeto      = SalarioBruto - @TotalDeducciones,
                 Procesada        = 1
             WHERE IdPlanillaSemXEmpleado = @IdPlanillaSemXEmpleado;
-            -- 3d. Acumular en planilla mensual del empleado
+
             IF @IdPlanillaMesXEmpleado IS NOT NULL
             BEGIN
                 UPDATE dbo.PlanillaMesXEmpleado
@@ -159,7 +159,7 @@ BEGIN
             FETCH NEXT FROM cur_empleados INTO @IdPlanillaSemXEmpleado, @IdEmpleado, @SalarioBruto;
         END;
         CLOSE cur_empleados; DEALLOCATE cur_empleados;
-        -- 4. Cerrar la semana
+        
         UPDATE dbo.SemanaPlanilla SET Cerrada = 1 WHERE IdSemanaPlanilla = @IdSemanaPlanilla;
 
         COMMIT TRANSACTION;
@@ -173,8 +173,7 @@ BEGIN
 END;
 GO
 -- ============================================================
--- SP: Apertura de nueva semana planilla
--- Se llama cada jueves para preparar la semana siguiente (viernes → jueves)
+-- SP: AperturaSemana
 -- ============================================================
 IF OBJECT_ID('sp_AperturaSemana', 'P') IS NOT NULL DROP PROCEDURE sp_AperturaSemana;
 GO
