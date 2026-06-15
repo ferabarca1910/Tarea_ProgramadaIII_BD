@@ -154,3 +154,17 @@ BEGIN
                 SalarioNeto      = SalarioBruto - @TotalDeducciones,
                 Procesada        = 1
             WHERE IdPlanillaSemXEmpleado = @IdPlanillaSemXEmpleado;
+            -- 3d. Acumular en planilla mensual del empleado
+            IF @IdPlanillaMesXEmpleado IS NOT NULL
+            BEGIN
+                UPDATE dbo.PlanillaMesXEmpleado
+                SET
+                    SalarioBrutoMensual     = SalarioBrutoMensual     + @SalarioBruto,
+                    TotalDeduccionesMensual = TotalDeduccionesMensual + @TotalDeducciones,
+                    SalarioNetoMensual      = SalarioNetoMensual      + (@SalarioBruto - @TotalDeducciones)
+                WHERE IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado;
+            END;
+
+            FETCH NEXT FROM cur_empleados INTO @IdPlanillaSemXEmpleado, @IdEmpleado, @SalarioBruto;
+        END;
+        CLOSE cur_empleados; DEALLOCATE cur_empleados;
