@@ -181,3 +181,54 @@ BEGIN
     END CATCH;
 END;
 GO
+-- ============================================================
+-- SP: Apertura de nueva semana planilla
+-- Se llama cada jueves para preparar la semana siguiente (viernes → jueves)
+-- ============================================================
+IF OBJECT_ID('sp_AperturaSemana', 'P') IS NOT NULL DROP PROCEDURE sp_AperturaSemana;
+GO
+CREATE PROCEDURE sp_AperturaSemana
+    @FechaInicioSemana  DATE,   -- Viernes siguiente
+    @FechaFinSemana     DATE    -- Jueves de la semana nueva
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Obtener el mes planilla que contiene esta semana
+        DECLARE @IdMesPlanilla INT;
+        SELECT @IdMesPlanilla = IdMesPlanilla
+        FROM dbo.MesPlanilla
+        WHERE FechaInicio <= @FechaInicioSemana
+          AND FechaFin    >= @FechaFinSemana
+          AND Cerrado = 0;
+
+        IF @IdMesPlanilla IS NULL
+        BEGIN
+            RAISERROR('No hay mes planilla abierto para la semana %s - %s.',
+                16, 1, CONVERT(VARCHAR,@FechaInicioSemana,103), CONVERT(VARCHAR,@FechaFinSemana,103));
+            ROLLBACK; RETURN;
+        END;
+
+        -- Crear encabezado de semana
+        DECLARE @IdSemanaPlanilla INT;
+        INSERT INTO dbo.SemanaPlanilla (IdMesPlanilla, FechaInicio, FechaFin, Cerrada)
+        VALUES (@IdMesPlanilla, @FechaInicioSemana, @FechaFinSemana, 0);
+        SET @IdSemanaPlanilla = SCOPE_IDENTITY();
+
+        -- Crear dbo.PlanillaSemXEmpleado para todos los empleados activos
+        INSERT INTO dbo.PlanillaSemXEmpleado (IdSemanaPlanilla, IdEmpleado, SalarioBruto, TotalDeducciones, SalarioNeto, HorasOrdinarias, HorasExtraNormales, HorasExtraDobles, Procesada)
+        SELECT @IdSemanaPlanilla, IdEmpleado, 0, 0, 0, 0, 0, 0, 0
+        FROM dbo.Empleado WHERE Activo = 1;
+
+        COMMIT TRANSACTION;
+        PRINT 'Apertura de semana planilla completada. IdSemanaPlanilla=' + CAST(@IdSemanaPlanilla AS VARCHAR);
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_AperturaSemana: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
