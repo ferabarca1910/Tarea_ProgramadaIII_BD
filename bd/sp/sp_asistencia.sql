@@ -1,14 +1,6 @@
--- ============================================================
--- SP_ASISTENCIA: Procesamiento de marcas de asistencia
--- Calcula horas ordinarias, extras normales y extras dobles.
--- ============================================================
 
 USE PlanillaObrera;
 GO
-
--- ============================================================
--- Función auxiliar: ¿Es feriado o domingo una fecha?
--- ============================================================
 IF OBJECT_ID('dbo.fn_EsFeriadoODomingo', 'FN') IS NOT NULL DROP FUNCTION dbo.fn_EsFeriadoODomingo;
 GO
 CREATE FUNCTION dbo.fn_EsFeriadoODomingo(@fecha DATE)
@@ -22,9 +14,7 @@ BEGIN
 END;
 GO
 
--- ============================================================
--- SP: Registrar bitácora (helper interno)
--- ============================================================
+
 IF OBJECT_ID('sp_RegistrarEvento', 'P') IS NOT NULL DROP PROCEDURE sp_RegistrarEvento;
 GO
 CREATE PROCEDURE sp_RegistrarEvento
@@ -42,14 +32,7 @@ BEGIN
 END;
 GO
 
--- ============================================================
--- SP: Procesar una marca de asistencia individual
--- Parámetros:
---   @ValorDocumento  : cédula del empleado (mapeo desde XML)
---   @FechaHoraEntrada / @FechaHoraSalida : DATETIME
---   @IdUsuarioSistema: usuario del proceso de simulación
---   @IPOrigen        : IP del proceso
--- ============================================================
+
 IF OBJECT_ID('sp_ProcesarAsistencia', 'P') IS NOT NULL DROP PROCEDURE sp_ProcesarAsistencia;
 GO
 CREATE PROCEDURE sp_ProcesarAsistencia
@@ -64,7 +47,6 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- 1. Obtener datos del empleado
         DECLARE @IdEmpleado     INT;
         DECLARE @IdPuesto       INT;
         DECLARE @SalarioXHora   DECIMAL(10,2);
@@ -84,13 +66,12 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
-        -- 2. Obtener jornada de la semana actual (la semana que contiene FechaEntrada)
+   
         DECLARE @FechaEntrada   DATE = CAST(@FechaHoraEntrada AS DATE);
         DECLARE @IdTipoJornada  INT;
         DECLARE @HoraFinJornada TIME;
 
-        -- La semana inicia el viernes anterior o igual a la fecha
-        -- FechaInicioSemana = viernes <= @FechaEntrada más reciente
+
         SELECT TOP 1
             @IdTipoJornada  = jes.IdTipoJornada,
             @HoraFinJornada = tj.HoraFin
@@ -106,7 +87,7 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
-        -- 3. Obtener la planilla semanal activa del empleado
+
         DECLARE @IdPlanillaSemXEmpleado INT;
 
         SELECT TOP 1 @IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado
@@ -123,7 +104,6 @@ BEGIN
             ROLLBACK; RETURN;
         END;
 
-        -- 4. Insertar marca de asistencia
         DECLARE @IdMarca INT;
         INSERT INTO dbo.MarcaAsistencia (IdEmpleado, FechaHoraEntrada, FechaHoraSalida, FechaOperacion)
         VALUES (@IdEmpleado, @FechaHoraEntrada, @FechaHoraSalida, @FechaEntrada);
