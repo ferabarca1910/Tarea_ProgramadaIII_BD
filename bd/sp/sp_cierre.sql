@@ -232,3 +232,49 @@ BEGIN
     END CATCH;
 END;
 GO
+-- ============================================================
+-- SP: Calcular y registrar aguinaldo (se llama en el 2do lunes de diciembre)
+-- ============================================================
+IF OBJECT_ID('sp_CalcularAguinaldo', 'P') IS NOT NULL DROP PROCEDURE sp_CalcularAguinaldo;
+GO
+CREATE PROCEDURE sp_CalcularAguinaldo
+    @Anio               INT,    -- año del aguinaldo (período dic año-1 a nov año)
+    @FechaPago          DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Salario bruto mensual acumulado: desde el mes que inicia en diciembre del año anterior
+        -- hasta el mes que termina en noviembre del año actual
+        -- El período es los 12 meses del ciclo planilla dic-nov
+        DECLARE @FechaInicioPeríodo DATE = CAST(CAST(@Anio-1 AS VARCHAR) + '-12-01' AS DATE);
+        DECLARE @FechaFinPeríodo    DATE = CAST(CAST(@Anio   AS VARCHAR) + '-11-30' AS DATE);
+
+        INSERT INTO dbo.Aguinaldo (IdEmpleado, Anio, MontoAguinaldo, FechaPago)
+        SELECT
+            pme.IdEmpleado,
+            @Anio,
+            ROUND(SUM(pme.SalarioBrutoMensual) / 12.0, 2),
+            @FechaPago
+        FROM dbo.PlanillaMesXEmpleado pme
+        INNER JOIN dbo.MesPlanilla mp ON pme.IdMesPlanilla = mp.IdMesPlanilla
+        WHERE mp.FechaInicio >= @FechaInicioPeríodo
+          AND mp.FechaFin    <= @FechaFinPeríodo
+        GROUP BY pme.IdEmpleado
+        HAVING NOT EXISTS (SELECT 1 FROM dbo.Aguinaldo ag WHERE ag.IdEmpleado = pme.IdEmpleado AND ag.Anio = @Anio);
+
+        COMMIT TRANSACTION;
+        PRINT 'dbo.Aguinaldo ' + CAST(@Anio AS VARCHAR) + ' calculado.';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_CalcularAguinaldo: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
+
+PRINT 'SPs de cierre, apertura y aguinaldo creados exitosamente.';
+GO
