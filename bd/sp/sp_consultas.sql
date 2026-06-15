@@ -312,4 +312,133 @@ BEGIN
     END CATCH;
 END;
 GO
-   
+
+    
+IF OBJECT_ID('sp_EliminarEmpleado', 'P') IS NOT NULL DROP PROCEDURE sp_EliminarEmpleado;
+GO
+CREATE PROCEDURE sp_EliminarEmpleado
+    @ValorDocumento     VARCHAR(30),
+    @IdUsuarioAdmin     INT,
+    @IPOrigen           VARCHAR(45)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+ 
+        DECLARE @IdEmpleado INT;
+        DECLARE @datos NVARCHAR(MAX);
+ 
+        SELECT @IdEmpleado = IdEmpleado FROM dbo.Empleado WHERE ValorDocumentoIdentidad = @ValorDocumento AND Activo = 1;
+        IF @IdEmpleado IS NULL
+        BEGIN
+            RAISERROR('Empleado con documento %s no encontrado.', 16, 1, @ValorDocumento);
+            ROLLBACK; RETURN;
+        END;
+ 
+        SELECT @datos = N'{"empleado_id":' + CAST(IdEmpleado AS VARCHAR) +
+            ',"nombre":"' + Nombre + '","doc":"' + ValorDocumento + '"}'
+        FROM dbo.Empleado WHERE IdEmpleado = @IdEmpleado;
+ 
+        UPDATE dbo.Empleado SET Activo = 0 WHERE IdEmpleado = @IdEmpleado;
+ 
+ 
+        EXEC sp_RegistrarEvento @IdUsuarioAdmin, 10, @IPOrigen, NULL, @datos, NULL;
+ 
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_EliminarEmpleado', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_EliminarEmpleado: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
+ 
+
+IF OBJECT_ID('sp_AsociarDeduccion', 'P') IS NOT NULL DROP PROCEDURE sp_AsociarDeduccion;
+GO
+CREATE PROCEDURE sp_AsociarDeduccion
+    @ValorDocumento     VARCHAR(30),
+    @IdTipoDeduccion    INT,
+    @MontoFijo          DECIMAL(12,2) = 0,
+    @FechaInicio        DATE,
+    @IdUsuarioAdmin     INT,
+    @IPOrigen           VARCHAR(45)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @IdEmpleado INT;
+    SELECT @IdEmpleado = IdEmpleado FROM dbo.Empleado WHERE ValorDocumentoIdentidad = @ValorDocumento AND Activo = 1;
+ 
+    INSERT INTO dbo.DeduccionEmpleado (IdEmpleado, IdTipoDeduccion, Valor, FechaInicio, FechaFin)
+    VALUES (@IdEmpleado, @IdTipoDeduccion, @MontoFijo, @FechaInicio, NULL);
+ 
+
+    DECLARE @p NVARCHAR(300) = N'{"empleado_id":' + CAST(@IdEmpleado AS VARCHAR) +
+        ',"tipo_deduccion_id":' + CAST(@IdTipoDeduccion AS VARCHAR) +
+        ',"monto_fijo":' + CAST(@MontoFijo AS VARCHAR) + '}';
+    EXEC sp_RegistrarEvento @IdUsuarioAdmin, 18, @IPOrigen, @p;
+END;
+GO
+ 
+
+IF OBJECT_ID('sp_DesasociarDeduccion', 'P') IS NOT NULL DROP PROCEDURE sp_DesasociarDeduccion;
+GO
+CREATE PROCEDURE sp_DesasociarDeduccion
+    @ValorDocumento     VARCHAR(30),
+    @IdTipoDeduccion    INT,
+    @FechaFin           DATE,
+    @IdUsuarioAdmin     INT,
+    @IPOrigen           VARCHAR(45)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @IdEmpleado INT;
+    SELECT @IdEmpleado = IdEmpleado FROM dbo.Empleado WHERE ValorDocumentoIdentidad = @ValorDocumento AND Activo = 1;
+ 
+
+    UPDATE dbo.DeduccionEmpleado
+    SET FechaFin = @FechaFin
+    WHERE IdEmpleado = @IdEmpleado
+      AND IdTipoDeduccion = @IdTipoDeduccion
+      AND FechaFin IS NULL;
+ 
+
+    DECLARE @p NVARCHAR(200) = N'{"empleado_id":' + CAST(@IdEmpleado AS VARCHAR) +
+        ',"tipo_deduccion_id":' + CAST(@IdTipoDeduccion AS VARCHAR) + '}';
+    EXEC sp_RegistrarEvento @IdUsuarioAdmin, 19, @IPOrigen, @p;
+END;
+GO
+ 
+
+IF OBJECT_ID('sp_ImpersonarEmpleado', 'P') IS NOT NULL DROP PROCEDURE sp_ImpersonarEmpleado;
+GO
+CREATE PROCEDURE sp_ImpersonarEmpleado
+    @IdEmpleado     INT,
+    @IdUsuarioAdmin INT,
+    @IPOrigen       VARCHAR(45)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @p NVARCHAR(100) = N'{"empleado_id":' + CAST(@IdEmpleado AS VARCHAR) + '}';
+    EXEC sp_RegistrarEvento @IdUsuarioAdmin, 15, @IPOrigen, @p;
+END;
+GO
+ 
+IF OBJECT_ID('sp_RegresarAdmin', 'P') IS NOT NULL DROP PROCEDURE sp_RegresarAdmin;
+GO
+CREATE PROCEDURE sp_RegresarAdmin
+    @IdUsuarioAdmin INT,
+    @IPOrigen       VARCHAR(45)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    EXEC sp_RegistrarEvento @IdUsuarioAdmin, 16, @IPOrigen, NULL;
+END;
+GO
+ 
+PRINT 'SPs de consultas y CRUD creados exitosamente.';
+GO   
