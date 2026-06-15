@@ -66,3 +66,45 @@ BEGIN
             SELECT @IdPlanillaMesXEmpleado = IdPlanillaMesXEmpleado
             FROM dbo.PlanillaMesXEmpleado
             WHERE IdMesPlanilla = @IdMesPlanilla AND IdEmpleado = @IdEmpleado;
+            -- 3a. Deducciones PORCENTUALES (se aplican sobre el salario bruto semanal)
+            DECLARE @IdTipoDedPct   INT;
+            DECLARE @PorcentajeDed  DECIMAL(10,4);
+            DECLARE @MontoDed       DECIMAL(12,2);
+            DECLARE @IdTipoMovDed   INT;
+
+            DECLARE cur_pct CURSOR LOCAL FAST_FORWARD FOR
+                SELECT de.IdTipoDeduccion, td.Valor
+                FROM dbo.DeduccionEmpleado de
+                INNER JOIN dbo.TipoDeduccion td ON de.IdTipoDeduccion = td.IdTipoDeduccion
+                WHERE de.IdEmpleado       = @IdEmpleado
+                  AND td.Porcentual       = 1
+                  AND de.FechaInicio     <= @FechaJueves
+                  AND (de.FechaFin IS NULL OR de.FechaFin >= @FechaJueves);
+
+            OPEN cur_pct;
+            FETCH NEXT FROM cur_pct INTO @IdTipoDedPct, @PorcentajeDed;
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                SET @MontoDed = ROUND(@SalarioBruto * @PorcentajeDed, 2);
+                SET @TotalDeducciones = @TotalDeducciones + @MontoDed;
+
+                -- Movimiento débito (IdTipoMovimiento 4 en adelante según catálogo)
+                -- Usamos el IdTipoDeduccion+3 como convención inicial; ajustar según catálogo real
+                INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
+                VALUES (@IdPlanillaSemXEmpleado, @IdTipoDedPct + 3, NULL, @FechaJueves, 0, -@MontoDed);
+
+                -- Acumular en detalle mensual
+                IF @IdPlanillaMesXEmpleado IS NOT NULL
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM dbo.DeduccionXEmpleadoXMes WHERE IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado AND IdTipoDeduccion = @IdTipoDedPct)
+                        UPDATE dbo.DeduccionXEmpleadoXMes
+                        SET MontoTotal = MontoTotal + @MontoDed
+                        WHERE IdPlanillaMesXEmpleado = @IdPlanillaMesXEmpleado AND IdTipoDeduccion = @IdTipoDedPct;
+                    ELSE
+                        INSERT INTO dbo.DeduccionXEmpleadoXMes (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
+                        VALUES (@IdPlanillaMesXEmpleado, @IdTipoDedPct, @MontoDed);
+                END;
+
+                FETCH NEXT FROM cur_pct INTO @IdTipoDedPct, @PorcentajeDed;
+            END;
+            CLOSE cur_pct; DEALLOCATE cur_pct;
