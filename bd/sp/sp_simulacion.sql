@@ -81,7 +81,7 @@ BEGIN
                 SELECT
                     nodo.value('@Nombre',             'VARCHAR(150)'),
                     nodo.value('@ValorTipoDocumento', 'VARCHAR(30)'),
-                    nodo.value('@IdPuesto',           'VARCHAR(100)'),   -- nombre del puesto
+                    nodo.value('@IdPuesto',           'VARCHAR(100)'),   
                     nodo.value('@dbo.Usuario',            'VARCHAR(50)'),
                     nodo.value('@Password',           'VARCHAR(255)')
                 FROM @NodoXML.nodes('/FechaOperacion/NuevosEmpleados/NuevoEmpleado') AS T(nodo);
@@ -193,7 +193,7 @@ BEGIN
             BEGIN
                 DECLARE @docValorDocJor     VARCHAR(30);
                 DECLARE @docIdTipoJornada   INT;
-                DECLARE @FechaViernes       DATE = DATEADD(DAY, 1, @FechaActual);  -- el viernes siguiente
+                DECLARE @FechaViernes       DATE = DATEADD(DAY, 1, @FechaActual); 
  
                 DECLARE cur_jornadas CURSOR LOCAL FAST_FORWARD FOR
                     SELECT
