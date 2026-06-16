@@ -210,4 +210,48 @@ BEGIN
                     FETCH NEXT FROM cur_jornadas INTO @docValorDocJor, @docIdTipoJornada;
                 END;
                 CLOSE cur_jornadas; DEALLOCATE cur_jornadas;
+
+-- ============================================================
+IF OBJECT_ID('sp_InicializarSistema', 'P') IS NOT NULL DROP PROCEDURE sp_InicializarSistema;
+GO
+CREATE PROCEDURE sp_InicializarSistema
+    @FechaInicioSimulacion  DATE    
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+ 
+ 
+        DECLARE @FechaFinMes    DATE;
+        DECLARE @MesInicio      INT = MONTH(@FechaInicioSimulacion);
+        DECLARE @AnioInicio     INT = YEAR(@FechaInicioSimulacion);
+        SET @FechaFinMes = dbo.fn_UltimoJuevesDelMes(@AnioInicio, @MesInicio);
+        DECLARE @NumJueves TINYINT = dbo.fn_ContarJueves(@FechaInicioSimulacion, @FechaFinMes);
+ 
+        INSERT INTO dbo.MesPlanilla (FechaInicio, FechaFin, CantidadJueves, Cerrado)
+        VALUES (@FechaInicioSimulacion, @FechaFinMes, @NumJueves, 0);
+ 
+        DECLARE @IdMes INT = SCOPE_IDENTITY();
+        DECLARE @FechaFinSemana DATE = DATEADD(DAY, 6, @FechaInicioSimulacion); 
+ 
+        INSERT INTO dbo.SemanaPlanilla (IdMesPlanilla, FechaInicio, FechaFin, Cerrada)
+        VALUES (@IdMes, @FechaInicioSimulacion, @FechaFinSemana, 0);
+ 
+        COMMIT TRANSACTION;
+        PRINT 'Sistema inicializado. Primera semana: ' +
+            CONVERT(VARCHAR,@FechaInicioSimulacion,103) + ' - ' + CONVERT(VARCHAR,@FechaFinSemana,103);
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_InicializarSistema', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+        DECLARE @msg VARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR('Error en sp_InicializarSistema: %s', 16, 1, @msg);
+    END CATCH;
+END;
+GO
+ 
+PRINT 'SP de inicialización creado exitosamente.';
+GO
  
