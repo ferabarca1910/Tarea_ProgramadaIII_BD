@@ -104,12 +104,12 @@ IF OBJECT_ID('dbo.sp_Login', 'P') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.sp_Login
-    @inUsername      VARCHAR(50)
-  , @inPassword      VARCHAR(255)
-  , @inIPOrigen      VARCHAR(45) = '127.0.0.1'
-  , @outIdUsuario    INT OUTPUT
-  , @outTipoUsuario  TINYINT OUTPUT
-  , @outResultCode   INT OUTPUT
+    @inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255)
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outIdUsuario INT OUTPUT
+  ,@outTipoUsuario TINYINT OUTPUT
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -121,7 +121,7 @@ BEGIN
     BEGIN TRY
         SELECT
             @outIdUsuario = u.IdUsuario
-          , @outTipoUsuario = u.Tipo
+          ,@outTipoUsuario = u.Tipo
         FROM dbo.Usuario AS u
         WHERE (u.Username = @inUsername);
 
@@ -147,7 +147,7 @@ BEGIN
             VALUES (
                 @outIdUsuario
               , 3
-              , @inIPOrigen
+              ,@inIPOrigen
               , CONCAT(N'{"username":"', @inUsername, N'"}')
             );
 
@@ -171,7 +171,7 @@ BEGIN
             VALUES (
                 @outIdUsuario
               , 2
-              , @inIPOrigen
+              ,@inIPOrigen
               , CONCAT(N'{"username":"', @inUsername, N'"}')
             );
 
@@ -188,7 +188,7 @@ BEGIN
         VALUES (
             @outIdUsuario
           , 1
-          , @inIPOrigen
+          ,@inIPOrigen
           , CONCAT(N'{"username":"', @inUsername, N'"}')
         );
 
@@ -217,8 +217,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ListarEmpleados
-    @inSoloActivos  BIT = 1
-  , @outResultCode  INT OUTPUT
+    @inSoloActivos BIT = 1
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -273,12 +273,12 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ListarEmpleadosConFiltro
-    @inNombre             VARCHAR(150) = NULL
-  , @inValorDocumento     VARCHAR(30) = NULL
-  , @inSoloActivos        BIT = 1
-  , @inIdUsuarioConsulta  INT = NULL
-  , @inIPOrigen           VARCHAR(45) = '127.0.0.1'
-  , @outResultCode        INT OUTPUT
+    @inNombre VARCHAR(150) = NULL
+  ,@inValorDocumento VARCHAR(30) = NULL
+  ,@inSoloActivos BIT = 1
+  ,@inIdUsuarioConsulta INT = NULL
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -326,7 +326,7 @@ BEGIN
                 VALUES (
                     @inIdUsuarioConsulta
                   , 11
-                  , @inIPOrigen
+                  ,@inIPOrigen
                   , CONCAT(N'{"nombre":"', @inNombre, N'"}')
                 );
             END;
@@ -342,7 +342,7 @@ BEGIN
                 VALUES (
                     @inIdUsuarioConsulta
                   , 12
-                  , @inIPOrigen
+                  ,@inIPOrigen
                   , CONCAT(N'{"valorDocumento":"', @inValorDocumento, N'"}')
                 );
             END;
@@ -373,9 +373,9 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ObtenerEmpleado
-    @inIdEmpleado        INT = NULL
-  , @inValorDocumento    VARCHAR(30) = NULL
-  , @outResultCode       INT OUTPUT
+    @inIdEmpleado INT = NULL
+  ,@inValorDocumento VARCHAR(30) = NULL
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -429,29 +429,29 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ActualizarEmpleado
-    @inIdEmpleado        INT
-  , @inNombre            VARCHAR(150)
-  , @inValorDocumento    VARCHAR(30)
-  , @inNombrePuesto      VARCHAR(100)
-  , @inUsername          VARCHAR(50)
-  , @inPassword          VARCHAR(255) = NULL
-  , @inCuentaBancaria    VARCHAR(30) = NULL
-  , @inFechaIngreso      DATE
-  , @inActivo            BIT = 1
-  , @inIdUsuarioAdmin    INT
-  , @inIPOrigen          VARCHAR(45) = '127.0.0.1'
-  , @outResultCode       INT OUTPUT
+    @inIdEmpleado INT
+  ,@inNombre VARCHAR(150)
+  ,@inValorDocumento VARCHAR(30)
+  ,@inNombrePuesto VARCHAR(100)
+  ,@inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255) = NULL
+  ,@inCuentaBancaria VARCHAR(30) = NULL
+  ,@inFechaIngreso DATE
+  ,@inActivo BIT = 1
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     SET @outResultCode = 0;
 
-    DECLARE @vIdPuesto      INT;
-    DECLARE @vIdUsuario     INT;
-    DECLARE @vDatosAntes    NVARCHAR(MAX);
-    DECLARE @vDatosDespues  NVARCHAR(MAX);
-    DECLARE @vParametros    NVARCHAR(MAX);
+    DECLARE @vIdPuesto INT;
+    DECLARE @vIdUsuario INT;
+    DECLARE @vDatosAntes NVARCHAR(MAX);
+    DECLARE @vDatosDespues NVARCHAR(MAX);
+    DECLARE @vParametros NVARCHAR(MAX);
 
     BEGIN TRY
         SELECT
@@ -467,7 +467,7 @@ BEGIN
 
         SELECT
             @vIdUsuario = e.IdUsuario
-          , @vDatosAntes = CONCAT(
+          ,@vDatosAntes = CONCAT(
                 N'{"idEmpleado":'
               , e.IdEmpleado
               , N',"nombre":"'
@@ -534,19 +534,19 @@ BEGIN
 
         SET @vParametros = CONCAT(
             N'{"idEmpleado":'
-          , @inIdEmpleado
+          ,@inIdEmpleado
           , N'}'
         );
 
         SET @vDatosDespues = CONCAT(
             N'{"idEmpleado":'
-          , @inIdEmpleado
+          ,@inIdEmpleado
           , N',"nombre":"'
-          , @inNombre
+          ,@inNombre
           , N'","valorDocumento":"'
-          , @inValorDocumento
+          ,@inValorDocumento
           , N'","puesto":"'
-          , @inNombrePuesto
+          ,@inNombrePuesto
           , N'","cuentaBancaria":"'
           , ISNULL(@inCuentaBancaria, '')
           , N'","fechaIngreso":"'
@@ -567,10 +567,10 @@ BEGIN
         VALUES (
             @inIdUsuarioAdmin
           , 8
-          , @inIPOrigen
-          , @vParametros
-          , @vDatosAntes
-          , @vDatosDespues
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosAntes
+          ,@vDatosDespues
         );
 
         COMMIT TRANSACTION;
@@ -603,11 +603,11 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ConsultarPlanillaSemanal
-    @inIdEmpleado         INT
-  , @inIdSemanaPlanilla   INT = NULL
-  , @inFechaInicio        DATE = NULL
-  , @inFechaFin           DATE = NULL
-  , @outResultCode        INT OUTPUT
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -671,11 +671,11 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ConsultarDetalleDeduccionesSemana
-    @inIdEmpleado         INT
-  , @inIdSemanaPlanilla   INT = NULL
-  , @inFechaInicio        DATE = NULL
-  , @inFechaFin           DATE = NULL
-  , @outResultCode        INT OUTPUT
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -750,11 +750,11 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ConsultarDetalleHorasSemana
-    @inIdEmpleado         INT
-  , @inIdSemanaPlanilla   INT = NULL
-  , @inFechaInicio        DATE = NULL
-  , @inFechaFin           DATE = NULL
-  , @outResultCode        INT OUTPUT
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -825,11 +825,11 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ConsultarPlanillaMensual
-    @inIdEmpleado      INT
-  , @inIdMesPlanilla   INT = NULL
-  , @inFechaInicio     DATE = NULL
-  , @inFechaFin        DATE = NULL
-  , @outResultCode     INT OUTPUT
+    @inIdEmpleado INT
+  ,@inIdMesPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -890,11 +890,11 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_ConsultarDetalleDeduccionesMes
-    @inIdEmpleado      INT
-  , @inIdMesPlanilla   INT = NULL
-  , @inFechaInicio     DATE = NULL
-  , @inFechaFin        DATE = NULL
-  , @outResultCode     INT OUTPUT
+    @inIdEmpleado INT
+  ,@inIdMesPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -952,75 +952,75 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebLogin
-    @inUsername      VARCHAR(50)
-  , @inPassword      VARCHAR(255)
-  , @inIPOrigen      VARCHAR(45) = '127.0.0.1'
-  , @outResultCode   INT = 0 OUTPUT
+    @inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255)
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @vIdUsuario   INT;
+    DECLARE @vIdUsuario INT;
     DECLARE @vTipoUsuario TINYINT;
 
     EXEC dbo.sp_Login
         @inUsername = @inUsername
-      , @inPassword = @inPassword
-      , @inIPOrigen = @inIPOrigen
-      , @outIdUsuario = @vIdUsuario OUTPUT
-      , @outTipoUsuario = @vTipoUsuario OUTPUT
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inPassword = @inPassword
+      ,@inIPOrigen = @inIPOrigen
+      ,@outIdUsuario = @vIdUsuario OUTPUT
+      ,@outTipoUsuario = @vTipoUsuario OUTPUT
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT
         @outResultCode AS ResultCode
-      , @vIdUsuario AS IdUsuario
-      , @vTipoUsuario AS TipoUsuario;
+      ,@vIdUsuario AS IdUsuario
+      ,@vTipoUsuario AS TipoUsuario;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebListarEmpleadosConFiltro
-    @inNombre             VARCHAR(150) = NULL
-  , @inValorDocumento     VARCHAR(30) = NULL
-  , @inSoloActivos        BIT = 1
-  , @inIdUsuarioConsulta  INT = NULL
-  , @inIPOrigen           VARCHAR(45) = '127.0.0.1'
-  , @outResultCode        INT = 0 OUTPUT
+    @inNombre VARCHAR(150) = NULL
+  ,@inValorDocumento VARCHAR(30) = NULL
+  ,@inSoloActivos BIT = 1
+  ,@inIdUsuarioConsulta INT = NULL
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ListarEmpleadosConFiltro
         @inNombre = @inNombre
-      , @inValorDocumento = @inValorDocumento
-      , @inSoloActivos = @inSoloActivos
-      , @inIdUsuarioConsulta = @inIdUsuarioConsulta
-      , @inIPOrigen = @inIPOrigen
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inValorDocumento = @inValorDocumento
+      ,@inSoloActivos = @inSoloActivos
+      ,@inIdUsuarioConsulta = @inIdUsuarioConsulta
+      ,@inIPOrigen = @inIPOrigen
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebObtenerEmpleado
-    @inIdEmpleado      INT = NULL
-  , @inValorDocumento  VARCHAR(30) = NULL
-  , @outResultCode     INT = 0 OUTPUT
+    @inIdEmpleado INT = NULL
+  ,@inValorDocumento VARCHAR(30) = NULL
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ObtenerEmpleado
         @inIdEmpleado = @inIdEmpleado
-      , @inValorDocumento = @inValorDocumento
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inValorDocumento = @inValorDocumento
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebObtenerEmpleadoPorUsuario
-    @inIdUsuario     INT
-  , @outResultCode   INT = 0 OUTPUT
+    @inIdUsuario INT
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1111,16 +1111,16 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebInsertarEmpleado
-    @inNombre           VARCHAR(150)
-  , @inValorDocumento   VARCHAR(30)
-  , @inNombrePuesto     VARCHAR(100)
-  , @inUsername         VARCHAR(50)
-  , @inPassword         VARCHAR(255)
-  , @inCuentaBancaria   VARCHAR(30)
-  , @inFechaIngreso     DATE
-  , @inIdUsuarioAdmin   INT
-  , @inIPOrigen         VARCHAR(45) = '127.0.0.1'
-  , @outResultCode      INT = 0 OUTPUT
+    @inNombre VARCHAR(150)
+  ,@inValorDocumento VARCHAR(30)
+  ,@inNombrePuesto VARCHAR(100)
+  ,@inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255)
+  ,@inCuentaBancaria VARCHAR(30)
+  ,@inFechaIngreso DATE
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1129,85 +1129,85 @@ BEGIN
 
     EXEC dbo.sp_InsertarEmpleado
         @inNombre = @inNombre
-      , @inValorDocumento = @inValorDocumento
-      , @inNombrePuesto = @inNombrePuesto
-      , @inUsername = @inUsername
-      , @inPassword = @inPassword
-      , @inCuentaBancaria = @inCuentaBancaria
-      , @inFechaIngreso = @inFechaIngreso
-      , @inIdUsuarioAdmin = @inIdUsuarioAdmin
-      , @inIPOrigen = @inIPOrigen
-      , @outIdEmpleadoNuevo = @vIdEmpleadoNuevo OUTPUT
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inValorDocumento = @inValorDocumento
+      ,@inNombrePuesto = @inNombrePuesto
+      ,@inUsername = @inUsername
+      ,@inPassword = @inPassword
+      ,@inCuentaBancaria = @inCuentaBancaria
+      ,@inFechaIngreso = @inFechaIngreso
+      ,@inIdUsuarioAdmin = @inIdUsuarioAdmin
+      ,@inIPOrigen = @inIPOrigen
+      ,@outIdEmpleadoNuevo = @vIdEmpleadoNuevo OUTPUT
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT
         @outResultCode AS ResultCode
-      , @vIdEmpleadoNuevo AS IdEmpleadoNuevo;
+      ,@vIdEmpleadoNuevo AS IdEmpleadoNuevo;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebActualizarEmpleado
-    @inIdEmpleado        INT
-  , @inNombre            VARCHAR(150)
-  , @inValorDocumento    VARCHAR(30)
-  , @inNombrePuesto      VARCHAR(100)
-  , @inUsername          VARCHAR(50)
-  , @inPassword          VARCHAR(255) = NULL
-  , @inCuentaBancaria    VARCHAR(30) = NULL
-  , @inFechaIngreso      DATE
-  , @inActivo            BIT = 1
-  , @inIdUsuarioAdmin    INT
-  , @inIPOrigen          VARCHAR(45) = '127.0.0.1'
-  , @outResultCode       INT = 0 OUTPUT
+    @inIdEmpleado INT
+  ,@inNombre VARCHAR(150)
+  ,@inValorDocumento VARCHAR(30)
+  ,@inNombrePuesto VARCHAR(100)
+  ,@inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255) = NULL
+  ,@inCuentaBancaria VARCHAR(30) = NULL
+  ,@inFechaIngreso DATE
+  ,@inActivo BIT = 1
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ActualizarEmpleado
         @inIdEmpleado = @inIdEmpleado
-      , @inNombre = @inNombre
-      , @inValorDocumento = @inValorDocumento
-      , @inNombrePuesto = @inNombrePuesto
-      , @inUsername = @inUsername
-      , @inPassword = @inPassword
-      , @inCuentaBancaria = @inCuentaBancaria
-      , @inFechaIngreso = @inFechaIngreso
-      , @inActivo = @inActivo
-      , @inIdUsuarioAdmin = @inIdUsuarioAdmin
-      , @inIPOrigen = @inIPOrigen
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inNombre = @inNombre
+      ,@inValorDocumento = @inValorDocumento
+      ,@inNombrePuesto = @inNombrePuesto
+      ,@inUsername = @inUsername
+      ,@inPassword = @inPassword
+      ,@inCuentaBancaria = @inCuentaBancaria
+      ,@inFechaIngreso = @inFechaIngreso
+      ,@inActivo = @inActivo
+      ,@inIdUsuarioAdmin = @inIdUsuarioAdmin
+      ,@inIPOrigen = @inIPOrigen
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebEliminarEmpleado
-    @inValorDocumento  VARCHAR(30)
-  , @inIdUsuarioAdmin  INT
-  , @inIPOrigen        VARCHAR(45) = '127.0.0.1'
-  , @outResultCode     INT = 0 OUTPUT
+    @inValorDocumento VARCHAR(30)
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_EliminarEmpleado
         @inValorDocumento = @inValorDocumento
-      , @inIdUsuarioAdmin = @inIdUsuarioAdmin
-      , @inIPOrigen = @inIPOrigen
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inIdUsuarioAdmin = @inIdUsuarioAdmin
+      ,@inIPOrigen = @inIPOrigen
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebRegistrarEventoBitacora
-    @inIdUsuario      INT
-  , @inIdTipoEvento  INT
-  , @inIPOrigen      VARCHAR(45)
-  , @inParametros    NVARCHAR(MAX) = NULL
-  , @inDatosAntes    NVARCHAR(MAX) = NULL
-  , @inDatosDespues  NVARCHAR(MAX) = NULL
-  , @outResultCode   INT = 0 OUTPUT
+    @inIdUsuario INT
+  ,@inIdTipoEvento INT
+  ,@inIPOrigen VARCHAR(45)
+  ,@inParametros NVARCHAR(MAX) = NULL
+  ,@inDatosAntes NVARCHAR(MAX) = NULL
+  ,@inDatosDespues NVARCHAR(MAX) = NULL
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1225,11 +1225,11 @@ BEGIN
         )
         VALUES (
             @inIdUsuario
-          , @inIdTipoEvento
-          , @inIPOrigen
-          , @inParametros
-          , @inDatosAntes
-          , @inDatosDespues
+          ,@inIdTipoEvento
+          ,@inIPOrigen
+          ,@inParametros
+          ,@inDatosAntes
+          ,@inDatosDespues
         );
 
         SELECT @outResultCode AS ResultCode;
@@ -1261,85 +1261,85 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebConsultarPlanillaSemanal
-    @inIdEmpleado        INT
-  , @inIdSemanaPlanilla  INT = NULL
-  , @outResultCode       INT = 0 OUTPUT
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ConsultarPlanillaSemanal
         @inIdEmpleado = @inIdEmpleado
-      , @inIdSemanaPlanilla = @inIdSemanaPlanilla
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inIdSemanaPlanilla = @inIdSemanaPlanilla
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebConsultarDetalleDeduccionesSemana
-    @inIdEmpleado        INT
-  , @inIdSemanaPlanilla  INT = NULL
-  , @outResultCode       INT = 0 OUTPUT
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ConsultarDetalleDeduccionesSemana
         @inIdEmpleado = @inIdEmpleado
-      , @inIdSemanaPlanilla = @inIdSemanaPlanilla
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inIdSemanaPlanilla = @inIdSemanaPlanilla
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebConsultarDetalleHorasSemana
-    @inIdEmpleado        INT
-  , @inIdSemanaPlanilla  INT = NULL
-  , @outResultCode       INT = 0 OUTPUT
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ConsultarDetalleHorasSemana
         @inIdEmpleado = @inIdEmpleado
-      , @inIdSemanaPlanilla = @inIdSemanaPlanilla
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inIdSemanaPlanilla = @inIdSemanaPlanilla
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebConsultarPlanillaMensual
-    @inIdEmpleado     INT
-  , @inIdMesPlanilla  INT = NULL
-  , @outResultCode    INT = 0 OUTPUT
+    @inIdEmpleado INT
+  ,@inIdMesPlanilla INT = NULL
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ConsultarPlanillaMensual
         @inIdEmpleado = @inIdEmpleado
-      , @inIdMesPlanilla = @inIdMesPlanilla
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inIdMesPlanilla = @inIdMesPlanilla
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_WebConsultarDetalleDeduccionesMes
-    @inIdEmpleado     INT
-  , @inIdMesPlanilla  INT = NULL
-  , @outResultCode    INT = 0 OUTPUT
+    @inIdEmpleado INT
+  ,@inIdMesPlanilla INT = NULL
+  ,@outResultCode INT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     EXEC dbo.sp_ConsultarDetalleDeduccionesMes
         @inIdEmpleado = @inIdEmpleado
-      , @inIdMesPlanilla = @inIdMesPlanilla
-      , @outResultCode = @outResultCode OUTPUT;
+      ,@inIdMesPlanilla = @inIdMesPlanilla
+      ,@outResultCode = @outResultCode OUTPUT;
 
     SELECT @outResultCode AS ResultCode;
 END;

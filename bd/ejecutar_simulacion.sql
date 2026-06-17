@@ -10,11 +10,11 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 
-DECLARE @vXML                     XML;
-DECLARE @vFechaPrimeraOperacion   DATE;
-DECLARE @vFechaInicioSimulacion   DATE;
-DECLARE @vResultCodeInicializar   INT = 0;
-DECLARE @vResultCodeSimulacion    INT = 0;
+DECLARE @vXML XML;
+DECLARE @vFechaPrimeraOperacion DATE;
+DECLARE @vFechaInicioSimulacion DATE;
+DECLARE @vResultCodeInicializar INT = 0;
+DECLARE @vResultCodeSimulacion INT = 0;
 
 SET @vXML = (
     SELECT CAST(BulkColumn AS XML)
@@ -32,22 +32,22 @@ SET @vFechaInicioSimulacion = DATEADD(DAY, 1, @vFechaPrimeraOperacion);
 
 EXEC dbo.sp_InicializarSistema
     @inFechaInicioSimulacion = @vFechaInicioSimulacion
-  , @outResultCode           = @vResultCodeInicializar OUTPUT;
+  ,@outResultCode = @vResultCodeInicializar OUTPUT;
 
 IF (@vResultCodeInicializar = 0)
 BEGIN
 
     EXEC dbo.sp_EjecutarSimulacion
-        @inXMLOperacion     = @vXML
-      , @inIdUsuarioSistema = 1
-      , @inIPOrigen         = '127.0.0.1'
-      , @outResultCode      = @vResultCodeSimulacion OUTPUT;
+        @inXMLOperacion = @vXML
+      ,@inIdUsuarioSistema = 1
+      ,@inIPOrigen = '127.0.0.1'
+      ,@outResultCode = @vResultCodeSimulacion OUTPUT;
 
 END;
 
 SELECT
     @vFechaPrimeraOperacion AS FechaPrimeraOperacion
-  , @vFechaInicioSimulacion AS FechaInicioSimulacion
-  , @vResultCodeInicializar AS ResultCodeInicializar
-  , @vResultCodeSimulacion  AS ResultCodeSimulacion;
+  ,@vFechaInicioSimulacion AS FechaInicioSimulacion
+  ,@vResultCodeInicializar AS ResultCodeInicializar
+  ,@vResultCodeSimulacion AS ResultCodeSimulacion;
 GO

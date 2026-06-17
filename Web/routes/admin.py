@@ -3,31 +3,33 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from routes.auth import admin_required, call_procedure, log_event
 
 
-admin_bp = Blueprint("admin", __name__)
+admin_bp=Blueprint("admin", __name__)
 
 
+#EmpleadosAdmin
 def listar_empleados(nombre=None, documento=None):
-    result_sets, output = call_procedure(
+    result_sets, output=call_procedure(
         "sp_WebListarEmpleadosConFiltro",
         [nombre, documento, 1, None, None],
     )
-    empleados = result_sets[0] if result_sets else []
+    empleados=result_sets[0] if result_sets else []
     return empleados, output.get("ResultCode")
 
 
 def obtener_empleado(id_empleado):
-    result_sets, output = call_procedure("sp_WebObtenerEmpleado", [id_empleado, None])
-    empleados = result_sets[0] if result_sets else []
-    empleado = empleados[0] if empleados else None
+    result_sets, output=call_procedure("sp_WebObtenerEmpleado", [id_empleado, None])
+    empleados=result_sets[0] if result_sets else []
+    empleado=empleados[0] if empleados else None
     return empleado, output.get("ResultCode")
 
 
 def listar_puestos():
-    result_sets, output = call_procedure("sp_WebListarPuestos")
-    puestos = result_sets[0] if result_sets else []
+    result_sets, output=call_procedure("sp_WebListarPuestos")
+    puestos=result_sets[0] if result_sets else []
     return puestos, output.get("ResultCode")
 
 
+#FormularioEmpleado
 def leer_formulario_empleado():
     return {
         "Nombre": request.form.get("nombre", "").strip(),
@@ -41,8 +43,9 @@ def leer_formulario_empleado():
     }
 
 
+#CRUDEmpleado
 def insertar_empleado(datos):
-    _, output = call_procedure(
+    _, output=call_procedure(
         "sp_WebInsertarEmpleado",
         [
             datos["Nombre"],
@@ -60,7 +63,7 @@ def insertar_empleado(datos):
 
 
 def actualizar_empleado(id_empleado, datos):
-    _, output = call_procedure(
+    _, output=call_procedure(
         "sp_WebActualizarEmpleado",
         [
             id_empleado,
@@ -80,7 +83,7 @@ def actualizar_empleado(id_empleado, datos):
 
 
 def eliminar_empleado(valor_documento):
-    _, output = call_procedure(
+    _, output=call_procedure(
         "sp_WebEliminarEmpleado",
         [
             valor_documento,
@@ -94,13 +97,13 @@ def eliminar_empleado(valor_documento):
 @admin_bp.route("/empleados")
 @admin_required
 def empleados():
-    nombre = request.args.get("nombre") or None
-    documento = request.args.get("documento") or None
-    empleados_data = []
-    result_code = None
+    nombre=request.args.get("nombre") or None
+    documento=request.args.get("documento") or None
+    empleados_data=[]
+    result_code=None
 
     try:
-        empleados_data, result_code = listar_empleados(nombre, documento)
+        empleados_data, result_code=listar_empleados(nombre, documento)
         log_event(
             12 if documento else 11,
             {
@@ -126,15 +129,15 @@ def empleados():
 @admin_bp.route("/empleados/nuevo", methods=["GET", "POST"])
 @admin_required
 def nuevo_empleado():
-    puestos, _ = listar_puestos()
-    empleado = {
+    puestos, _=listar_puestos()
+    empleado={
         "Activo": 1,
     }
 
     if request.method == "POST":
-        empleado = leer_formulario_empleado()
-        output = insertar_empleado(empleado)
-        result_code = output.get("ResultCode")
+        empleado=leer_formulario_empleado()
+        output=insertar_empleado(empleado)
+        result_code=output.get("ResultCode")
 
         if result_code == 0:
             flash("Empleado creado correctamente.", "info")
@@ -154,17 +157,17 @@ def nuevo_empleado():
 @admin_bp.route("/empleados/<int:id_empleado>/editar", methods=["GET", "POST"])
 @admin_required
 def editar_empleado(id_empleado):
-    puestos, _ = listar_puestos()
-    empleado, result_code = obtener_empleado(id_empleado)
+    puestos, _=listar_puestos()
+    empleado, result_code=obtener_empleado(id_empleado)
 
     if empleado is None:
         flash(f"No se encontró el empleado. ResultCode: {result_code}", "error")
         return redirect(url_for("admin.empleados"))
 
     if request.method == "POST":
-        datos = leer_formulario_empleado()
-        output = actualizar_empleado(id_empleado, datos)
-        result_code = output.get("ResultCode")
+        datos=leer_formulario_empleado()
+        output=actualizar_empleado(id_empleado, datos)
+        result_code=output.get("ResultCode")
 
         if result_code == 0:
             flash("Empleado actualizado correctamente.", "info")
@@ -185,14 +188,14 @@ def editar_empleado(id_empleado):
 @admin_bp.route("/empleados/<int:id_empleado>/eliminar", methods=["POST"])
 @admin_required
 def eliminar_empleado_route(id_empleado):
-    empleado, result_code = obtener_empleado(id_empleado)
+    empleado, result_code=obtener_empleado(id_empleado)
 
     if empleado is None:
         flash(f"No se encontró el empleado. ResultCode: {result_code}", "error")
         return redirect(url_for("admin.empleados"))
 
-    output = eliminar_empleado(empleado["ValorDocumentoIdentidad"])
-    result_code = output.get("ResultCode")
+    output=eliminar_empleado(empleado["ValorDocumentoIdentidad"])
+    result_code=output.get("ResultCode")
 
     if result_code == 0:
         flash("Empleado eliminado correctamente.", "info")
@@ -206,7 +209,7 @@ def eliminar_empleado_route(id_empleado):
 @admin_required
 def impersonar_empleado(id_empleado):
     try:
-        empleado, result_code = obtener_empleado(id_empleado)
+        empleado, result_code=obtener_empleado(id_empleado)
     except Exception as exc:
         flash(str(exc), "error")
         return redirect(url_for("admin.empleados"))
@@ -215,8 +218,8 @@ def impersonar_empleado(id_empleado):
         flash(f"No se pudo impersonar el empleado. ResultCode: {result_code}", "error")
         return redirect(url_for("admin.empleados"))
 
-    session["id_empleado_impersonado"] = empleado["IdEmpleado"]
-    session["nombre_empleado_impersonado"] = empleado["Nombre"]
+    session["id_empleado_impersonado"]=empleado["IdEmpleado"]
+    session["nombre_empleado_impersonado"]=empleado["Nombre"]
     log_event(
         11,
         {

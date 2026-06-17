@@ -6,7 +6,7 @@
 USE PlanillaObrera;
 GO
 
-DECLARE @vXML        XML;
+DECLARE @vXML XML;
 DECLARE @vResultCode INT = 0;
 
 --Leer el XML desde el archivo en disco
@@ -21,8 +21,8 @@ SET @vXML = (
 
 --Llamar al SP maestro que carga todos los catalogos en orden
 EXEC dbo.sp_CargarCatalogos
-    @inXML        = @vXML
-  , @outResultCode = @vResultCode OUTPUT;
+    @inXML = @vXML
+  ,@outResultCode = @vResultCode OUTPUT;
 
 --0= exito, cualquier otro valor indica error
 SELECT @vResultCode AS ResultCode;

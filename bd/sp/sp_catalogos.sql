@@ -44,8 +44,8 @@ IF OBJECT_ID('dbo.sp_CargarTiposJornada', 'P') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposJornada
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -83,8 +83,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarPuestos
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -118,8 +118,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarFeriados
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -155,8 +155,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposEvento
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -190,8 +190,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposMovimiento
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -231,8 +231,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposDeduccion
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -276,8 +276,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarUsuarios
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -315,8 +315,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarCodigosError
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -350,8 +350,8 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarCatalogos
-    @inXML          XML
-  , @outResultCode INT OUTPUT
+    @inXML XML
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -365,35 +365,35 @@ BEGIN
 
         EXEC dbo.sp_CargarTiposJornada
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarPuestos
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarFeriados
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarTiposEvento
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarTiposMovimiento
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarTiposDeduccion
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarUsuarios
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarCodigosError
             @inXML = @inXML
-          , @outResultCode = @vResultCode OUTPUT;
+          ,@outResultCode = @vResultCode OUTPUT;
 
         COMMIT TRANSACTION;
 

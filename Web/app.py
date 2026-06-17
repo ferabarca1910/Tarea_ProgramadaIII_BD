@@ -7,9 +7,9 @@ from routes.empleado import empleado_bp
 
 
 def create_app():
-    app = Flask(__name__)
+    app=Flask(__name__)
     app.config.from_object(Config)
-    app.config["SQL_CONNECTION_STRING"] = Config.connection_string()
+    app.config["SQL_CONNECTION_STRING"]=Config.connection_string()
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
@@ -18,7 +18,7 @@ def create_app():
     return app
 
 
-app = create_app()
+app=create_app()
 
 
 if __name__ == "__main__":

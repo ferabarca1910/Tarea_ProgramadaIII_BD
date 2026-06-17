@@ -85,7 +85,7 @@ CREATE TABLE dbo.TipoEvento (
 );
 GO
 
--- Codigos de error del sistema, se cargan desde XML
+--Codigos de error del sistema, se cargan desde XML
 CREATE TABLE dbo.CodigoError (
     Codigo      INT          NOT NULL
   , Descripcion VARCHAR(255) NOT NULL
@@ -287,7 +287,7 @@ CREATE TABLE dbo.MovimientoPlanilla (
 GO
 
 --BITACORA DE EVENTOS
--- Parametros, DatosAntes y DatosDespues se guardan en formato JSON
+--Parametros, DatosAntes y DatosDespues se guardan en formato JSON
 
 CREATE TABLE dbo.BitacoraEvento (
     IdBitacoraEvento    INT            NOT NULL IDENTITY(1,1)
@@ -304,8 +304,8 @@ CREATE TABLE dbo.BitacoraEvento (
 );
 GO
 
--- ERRORES DE BASE DE DATOS
--- El bloque CATCH de cada SP inserta aqui los errores
+--ERRORES DE BASE DE DATOS
+--El bloque CATCH de cada SP inserta aqui los errores
 
 CREATE TABLE dbo.DBErrors (
     IdDBError   INT          NOT NULL IDENTITY(1,1)

@@ -1,6 +1,6 @@
--- ======================================================================
--- sp_simulacion.sql - Procedimientos para la simulación de planilla
--- ======================================================================
+--======================================================================
+--sp_simulacion.sql - Procedimientos para la simulación de planilla
+--======================================================================
 
 USE PlanillaObrera;
 GO
@@ -11,9 +11,9 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 
--- ======================================================================
--- Función auxiliar: determina si una fecha es domingo o feriado
--- ======================================================================
+--======================================================================
+--Función auxiliar: determina si una fecha es domingo o feriado
+--======================================================================
 IF OBJECT_ID('dbo.fn_EsFeriadoODomingo', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_EsFeriadoODomingo;
 GO
@@ -35,9 +35,9 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- Función auxiliar: último jueves de un mes
--- ======================================================================
+--======================================================================
+--Función auxiliar: último jueves de un mes
+--======================================================================
 IF OBJECT_ID('dbo.fn_UltimoJuevesDelMes', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_UltimoJuevesDelMes;
 GO
@@ -56,9 +56,9 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- Función auxiliar: cuenta jueves entre dos fechas
--- ======================================================================
+--======================================================================
+--Función auxiliar: cuenta jueves entre dos fechas
+--======================================================================
 IF OBJECT_ID('dbo.fn_ContarJueves', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_ContarJueves;
 GO
@@ -68,7 +68,7 @@ RETURNS TINYINT
 AS
 BEGIN
     DECLARE @vCantidad TINYINT = 0;
-    DECLARE @vFecha    DATE = @inFechaInicio;
+    DECLARE @vFecha DATE = @inFechaInicio;
 
     WHILE (@vFecha <= @inFechaFin)
     BEGIN
@@ -84,16 +84,16 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- sp_InicializarSistema
--- ======================================================================
+--======================================================================
+--sp_InicializarSistema
+--======================================================================
 IF OBJECT_ID('dbo.sp_InicializarSistema', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_InicializarSistema;
 GO
 
 CREATE PROCEDURE dbo.sp_InicializarSistema
-    @inFechaInicioSimulacion DATE,
-    @outResultCode           INT OUTPUT
+    @inFechaInicioSimulacion DATE
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -106,7 +106,7 @@ BEGIN
     DECLARE @vIdMes INT;
     DECLARE @vFechaFinSem DATE;
 
-    SET @vMesInicio  = MONTH(@inFechaInicioSimulacion);
+    SET @vMesInicio = MONTH(@inFechaInicioSimulacion);
     SET @vAnioInicio = YEAR(@inFechaInicioSimulacion);
     SET @vFechaFinMes = dbo.fn_UltimoJuevesDelMes(@vAnioInicio, @vMesInicio);
     SET @vNumJueves = dbo.fn_ContarJueves(@inFechaInicioSimulacion, @vFechaFinMes);
@@ -141,9 +141,9 @@ BEGIN
             0
         );
 
-        -- Registrar el inicio en bitácora? (opcional)
-        -- Aquí no se usa sp_RegistrarEvento porque es un script de simulación,
-        -- pero podemos insertar manualmente si se desea.
+        --Registrar el inicio en bitácora? (opcional)
+        --Aquí no se usa sp_RegistrarEvento porque es un script de simulación,
+        --pero podemos insertar manualmente si se desea.
 
         PRINT 'Sistema inicializado. Primera semana: '
             + CONVERT(VARCHAR, @inFechaInicioSimulacion, 103) + ' - '
@@ -158,20 +158,20 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- sp_ProcesarAsistencia (por empleado, en una transacción)
--- ======================================================================
+--======================================================================
+--sp_ProcesarAsistencia (por empleado, en una transacción)
+--======================================================================
 IF OBJECT_ID('dbo.sp_ProcesarAsistencia', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_ProcesarAsistencia;
 GO
 
 CREATE PROCEDURE dbo.sp_ProcesarAsistencia
-    @inValorDocumento   VARCHAR(30),
-    @inFechaHoraEntrada DATETIME,
-    @inFechaHoraSalida  DATETIME,
-    @inIdUsuarioSistema INT,
-    @inIPOrigen         VARCHAR(45) = '127.0.0.1',
-    @outResultCode      INT OUTPUT
+    @inValorDocumento VARCHAR(30)
+  ,@inFechaHoraEntrada DATETIME
+  ,@inFechaHoraSalida DATETIME
+  ,@inIdUsuarioSistema INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -206,7 +206,7 @@ BEGIN
 
     SET @vFechaEntrada = CAST(@inFechaHoraEntrada AS DATE);
 
-    -- Obtener empleado y salario
+    --Obtener empleado y salario
     SELECT
         @vIdEmpleado = e.IdEmpleado,
         @vSalarioXHora = p.SalarioXHora
@@ -221,7 +221,7 @@ BEGIN
         RETURN;
     END
 
-    -- Obtener jornada de la semana
+    --Obtener jornada de la semana
     SELECT TOP (1)
         @vIdTipoJornada = jes.IdTipoJornada
     FROM dbo.JornadaEmpleadoSemana AS jes
@@ -235,7 +235,7 @@ BEGIN
         RETURN;
     END
 
-    -- Calcular fin de jornada (considerando cruce de día)
+    --Calcular fin de jornada (considerando cruce de día)
     SELECT
         @vFinJornadaDT =
             CASE
@@ -246,7 +246,7 @@ BEGIN
     FROM dbo.TipoJornada AS tj
     WHERE (tj.IdTipoJornada = @vIdTipoJornada);
 
-    -- Obtener planilla semanal abierta para este empleado
+    --Obtener planilla semanal abierta para este empleado
     SELECT TOP (1)
         @vIdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado
     FROM dbo.PlanillaSemXEmpleado AS pse
@@ -262,7 +262,7 @@ BEGIN
         RETURN;
     END
 
-    -- Cálculo de minutos
+    --Cálculo de minutos
     SET @vMinutosTrabajados = DATEDIFF(MINUTE, @inFechaHoraEntrada, @inFechaHoraSalida);
     SET @vMinutosJornada = DATEDIFF(MINUTE, @inFechaHoraEntrada, @vFinJornadaDT);
     IF (@vMinutosJornada < 0) SET @vMinutosJornada = 0;
@@ -285,7 +285,7 @@ BEGIN
     BEGIN
         IF (@vEsFerODom = 0)
         BEGIN
-            -- Horas extra hasta medianoche (normales) y después (dobles si es feriado/domingo)
+            --Horas extra hasta medianoche (normales) y después (dobles si es feriado/domingo)
             SET @vMinHastaMedNoche = DATEDIFF(
                 MINUTE,
                 @vFinJornadaDT,
@@ -312,16 +312,16 @@ BEGIN
         END;
     END;
 
-    -- Montos
-    SET @vMontoOrdinario   = @vHorasOrdinarias * @vSalarioXHora;
+    --Montos
+    SET @vMontoOrdinario = @vHorasOrdinarias * @vSalarioXHora;
     SET @vMontoExtraNormal = @vHorasExtraNormales * @vSalarioXHora * 1.5;
-    SET @vMontoExtraDoble  = @vHorasExtraDobles * @vSalarioXHora * 2.0;
+    SET @vMontoExtraDoble = @vHorasExtraDobles * @vSalarioXHora * 2.0;
 
-    -- Inicio de transacción
+    --Inicio de transacción
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- Insertar marca de asistencia
+        --Insertar marca de asistencia
         INSERT INTO dbo.MarcaAsistencia (
             IdEmpleado,
             FechaHoraEntrada,
@@ -336,7 +336,7 @@ BEGIN
         );
         SET @vIdMarca = SCOPE_IDENTITY();
 
-        -- Insertar movimientos (solo si hay horas > 0)
+        --Insertar movimientos (solo si hay horas > 0)
         IF (@vHorasOrdinarias > 0)
             INSERT INTO dbo.MovimientoPlanilla (
                 IdPlanillaSemXEmpleado,
@@ -391,7 +391,7 @@ BEGIN
                 @vMontoExtraDoble
             );
 
-        -- Actualizar acumulados en planilla semanal
+        --Actualizar acumulados en planilla semanal
         UPDATE dbo.PlanillaSemXEmpleado
         SET
             SalarioBruto       = SalarioBruto + @vMontoOrdinario + @vMontoExtraNormal + @vMontoExtraDoble,
@@ -400,7 +400,7 @@ BEGIN
             HorasExtraDobles   = HorasExtraDobles + @vHorasExtraDobles
         WHERE (IdPlanillaSemXEmpleado = @vIdPlanillaSemXEmpleado);
 
-        -- Registrar en bitácora (evento de asistencia procesada)
+        --Registrar en bitácora (evento de asistencia procesada)
         SET @vParams = N'{"empleado_doc":"' + @inValorDocumento
                      + N'","entrada":"' + CONVERT(VARCHAR, @inFechaHoraEntrada, 120)
                      + N'","salida":"' + CONVERT(VARCHAR, @inFechaHoraSalida, 120) + N'"}';
@@ -429,18 +429,18 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- sp_CierreSemanal (se ejecuta los jueves)
--- ======================================================================
+--======================================================================
+--sp_CierreSemanal (se ejecuta los jueves)
+--======================================================================
 IF OBJECT_ID('dbo.sp_CierreSemanal', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_CierreSemanal;
 GO
 
 CREATE PROCEDURE dbo.sp_CierreSemanal
-    @inFechaJueves      DATE,
-    @inIdUsuarioSistema INT,
-    @inIPOrigen         VARCHAR(45) = '127.0.0.1',
-    @outResultCode      INT OUTPUT
+    @inFechaJueves DATE
+  ,@inIdUsuarioSistema INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -452,10 +452,10 @@ BEGIN
     DECLARE @vParametros NVARCHAR(MAX);
     DECLARE @vMensaje NVARCHAR(100);
 
-    -- Obtener la semana abierta que finaliza en @inFechaJueves
+    --Obtener la semana abierta que finaliza en @inFechaJueves
     SELECT
         @vIdSemanaPlanilla = sp.IdSemanaPlanilla,
-        @vIdMesPlanilla    = sp.IdMesPlanilla
+        @vIdMesPlanilla = sp.IdMesPlanilla
     FROM dbo.SemanaPlanilla AS sp
     WHERE (sp.FechaFin = @inFechaJueves)
       AND (sp.Cerrada = 0);
@@ -470,7 +470,7 @@ BEGIN
     FROM dbo.MesPlanilla AS mp
     WHERE (mp.IdMesPlanilla = @vIdMesPlanilla);
 
-    -- Tabla variable para deducciones porcentuales
+    --Tabla variable para deducciones porcentuales
     DECLARE @tDeduccionesPct TABLE (
         IdPlanillaSemXEmpleado INT,
         IdPlanillaMesXEmpleado INT,
@@ -500,7 +500,7 @@ BEGIN
       AND (de.FechaInicio <= @inFechaJueves)
       AND (de.FechaFin IS NULL OR de.FechaFin >= @inFechaJueves);
 
-    -- Tabla variable para deducciones fijas
+    --Tabla variable para deducciones fijas
     DECLARE @tDeduccionesFijas TABLE (
         IdPlanillaSemXEmpleado INT,
         IdPlanillaMesXEmpleado INT,
@@ -534,7 +534,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- Insertar movimientos de débito para deducciones porcentuales
+        --Insertar movimientos de débito para deducciones porcentuales
         INSERT INTO dbo.MovimientoPlanilla (
             IdPlanillaSemXEmpleado,
             IdTipoMovimiento,
@@ -551,7 +551,7 @@ BEGIN
         FROM @tDeduccionesPct AS dp
         INNER JOIN dbo.TipoDeduccion AS td ON (td.IdTipoDeduccion = dp.IdTipoDeduccion);
 
-        -- Insertar movimientos de débito para deducciones fijas
+        --Insertar movimientos de débito para deducciones fijas
         INSERT INTO dbo.MovimientoPlanilla (
             IdPlanillaSemXEmpleado,
             IdTipoMovimiento,
@@ -568,7 +568,7 @@ BEGIN
         FROM @tDeduccionesFijas AS df
         INNER JOIN dbo.TipoDeduccion AS td ON (td.IdTipoDeduccion = df.IdTipoDeduccion);
 
-        -- Actualizar TotalDeducciones y SalarioNeto en PlanillaSemXEmpleado
+        --Actualizar TotalDeducciones y SalarioNeto en PlanillaSemXEmpleado
         UPDATE pse
         SET
             pse.TotalDeducciones = ISNULL(t.MontoTotal, 0),
@@ -587,7 +587,7 @@ BEGIN
         ) AS t ON (t.IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado)
         WHERE (pse.IdSemanaPlanilla = @vIdSemanaPlanilla);
 
-        -- Acumular deducciones porcentuales en DeduccionXEmpleadoXMes
+        --Acumular deducciones porcentuales en DeduccionXEmpleadoXMes
         MERGE dbo.DeduccionXEmpleadoXMes AS dest
         USING (
             SELECT
@@ -606,7 +606,7 @@ BEGIN
             INSERT (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
             VALUES (src.IdPlanillaMesXEmpleado, src.IdTipoDeduccion, src.Monto);
 
-        -- Acumular deducciones fijas en DeduccionXEmpleadoXMes
+        --Acumular deducciones fijas en DeduccionXEmpleadoXMes
         MERGE dbo.DeduccionXEmpleadoXMes AS dest
         USING (
             SELECT
@@ -625,7 +625,7 @@ BEGIN
             INSERT (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
             VALUES (src.IdPlanillaMesXEmpleado, src.IdTipoDeduccion, src.Monto);
 
-        -- Acumular en PlanillaMesXEmpleado (sumar los valores de la semana)
+        --Acumular en PlanillaMesXEmpleado (sumar los valores de la semana)
         UPDATE pme
         SET
             SalarioBrutoMensual     = ISNULL(pme.SalarioBrutoMensual, 0) + ISNULL(pse.SalarioBruto, 0),
@@ -637,7 +637,7 @@ BEGIN
         WHERE (pse.IdSemanaPlanilla = @vIdSemanaPlanilla)
           AND (pme.IdMesPlanilla = @vIdMesPlanilla);
 
-        -- Cerrar la semana
+        --Cerrar la semana
         UPDATE dbo.SemanaPlanilla
         SET Cerrada = 1
         WHERE (IdSemanaPlanilla = @vIdSemanaPlanilla);
@@ -680,17 +680,17 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- sp_AperturaSemana
--- ======================================================================
+--======================================================================
+--sp_AperturaSemana
+--======================================================================
 IF OBJECT_ID('dbo.sp_AperturaSemana', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_AperturaSemana;
 GO
 
 CREATE PROCEDURE dbo.sp_AperturaSemana
-    @inFechaInicioSemana DATE,
-    @inFechaFinSemana    DATE,
-    @outResultCode       INT OUTPUT
+    @inFechaInicioSemana DATE
+  ,@inFechaFinSemana DATE
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -728,7 +728,7 @@ BEGIN
         );
         SET @vIdSemanaPlanilla = SCOPE_IDENTITY();
 
-        -- Crear registro de planilla semanal para todos los empleados activos
+        --Crear registro de planilla semanal para todos los empleados activos
         INSERT INTO dbo.PlanillaSemXEmpleado (
             IdSemanaPlanilla,
             IdEmpleado,
@@ -764,18 +764,18 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- sp_AperturaMes
--- ======================================================================
+--======================================================================
+--sp_AperturaMes
+--======================================================================
 IF OBJECT_ID('dbo.sp_AperturaMes', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_AperturaMes;
 GO
 
 CREATE PROCEDURE dbo.sp_AperturaMes
-    @inFechaInicioMes  DATE,
-    @inFechaFinMes     DATE,
-    @inCantidadJueves  TINYINT,
-    @outResultCode     INT OUTPUT
+    @inFechaInicioMes DATE
+  ,@inFechaFinMes DATE
+  ,@inCantidadJueves TINYINT
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -829,18 +829,18 @@ BEGIN
 END;
 GO
 
--- ======================================================================
--- sp_EjecutarSimulacion (maestro)
--- ======================================================================
+--======================================================================
+--sp_EjecutarSimulacion (maestro)
+--======================================================================
 IF OBJECT_ID('dbo.sp_EjecutarSimulacion', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_EjecutarSimulacion;
 GO
 
 CREATE PROCEDURE dbo.sp_EjecutarSimulacion
-    @inXMLOperacion     XML,
-    @inIdUsuarioSistema INT = 1,
-    @inIPOrigen         VARCHAR(45) = '127.0.0.1',
-    @outResultCode      INT OUTPUT
+    @inXMLOperacion XML
+  ,@inIdUsuarioSistema INT = 1
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -848,7 +848,7 @@ BEGIN
 
     DECLARE @vResultCode INT = 0;
 
-    -- Tabla variable con todas las fechas de operación
+    --Tabla variable con todas las fechas de operación
     DECLARE @tFechas TABLE (
         Fila INT IDENTITY(1,1),
         Fecha DATE,
@@ -891,9 +891,9 @@ BEGIN
         SET @vDiaSemana = DATEPART(WEEKDAY, @vFechaActual);
         SET @vEsJueves = CASE WHEN (@vDiaSemana = 5) THEN 1 ELSE 0 END;
 
-        -- ==========================
-        -- Insertar nuevos empleados
-        -- ==========================
+        --==========================
+        --Insertar nuevos empleados
+        --==========================
         DECLARE @tNuevosEmpleados TABLE (
             Fila INT IDENTITY(1,1),
             ValorDocumento VARCHAR(30),
@@ -946,24 +946,24 @@ BEGIN
             WHERE (Fila = @vNuevoFila);
 
             EXEC dbo.sp_InsertarEmpleado
-                @inNombre           = @vNuevoNombre,
-                @inValorDocumento   = @vNuevoValorDoc,
-                @inNombrePuesto     = @vNuevoPuesto,
-                @inUsername         = @vNuevoUsername,
-                @inPassword         = @vNuevoPassword,
-                @inCuentaBancaria   = @vNuevoCuenta,
-                @inFechaIngreso     = @vFechaActual,
-                @inIdUsuarioAdmin   = @inIdUsuarioSistema,
-                @inIPOrigen         = @inIPOrigen,
+                @inNombre = @vNuevoNombre,
+                @inValorDocumento = @vNuevoValorDoc,
+                @inNombrePuesto = @vNuevoPuesto,
+                @inUsername = @vNuevoUsername,
+                @inPassword = @vNuevoPassword,
+                @inCuentaBancaria = @vNuevoCuenta,
+                @inFechaIngreso = @vFechaActual,
+                @inIdUsuarioAdmin = @inIdUsuarioSistema,
+                @inIPOrigen = @inIPOrigen,
                 @outIdEmpleadoNuevo = @vIdEmpleadoNuevo OUTPUT,
-                @outResultCode      = @vResultCode OUTPUT;
+                @outResultCode = @vResultCode OUTPUT;
 
             SET @vNuevoFila = @vNuevoFila + 1;
         END;
 
-        -- ==========================
-        -- Eliminar empleados
-        -- ==========================
+        --==========================
+        --Eliminar empleados
+        --==========================
         DECLARE @tEliminarEmpleados TABLE (
             Fila INT IDENTITY(1,1),
             ValorDocumento VARCHAR(30)
@@ -989,15 +989,15 @@ BEGIN
             EXEC dbo.sp_EliminarEmpleado
                 @inValorDocumento = @vElimDoc,
                 @inIdUsuarioAdmin = @inIdUsuarioSistema,
-                @inIPOrigen       = @inIPOrigen,
-                @outResultCode    = @vResultCode OUTPUT;
+                @inIPOrigen = @inIPOrigen,
+                @outResultCode = @vResultCode OUTPUT;
 
             SET @vElimFila = @vElimFila + 1;
         END;
 
-        -- ==========================
-        -- Asociar deducciones no obligatorias
-        -- ==========================
+        --==========================
+        --Asociar deducciones no obligatorias
+        --==========================
         DECLARE @tAsociarDeducciones TABLE (
             Fila INT IDENTITY(1,1),
             ValorDocumento VARCHAR(30),
@@ -1036,7 +1036,7 @@ BEGIN
             FROM @tAsociarDeducciones
             WHERE (Fila = @vAsocFila);
 
-            -- Obtener IdTipoDeduccion por nombre (directo)
+            --Obtener IdTipoDeduccion por nombre (directo)
             SELECT @vAsocIdTipoDed = td.IdTipoDeduccion
             FROM dbo.TipoDeduccion AS td
             WHERE (td.Nombre = @vAsocNombreDed);
@@ -1044,21 +1044,21 @@ BEGIN
             IF (@vAsocIdTipoDed IS NOT NULL)
             BEGIN
                 EXEC dbo.sp_AsociarDeduccion
-                    @inValorDocumento  = @vAsocDoc,
+                    @inValorDocumento = @vAsocDoc,
                     @inIdTipoDeduccion = @vAsocIdTipoDed,
-                    @inMontoFijo       = @vAsocMonto,
-                    @inFechaInicio     = @vFechaInicioAsoc,
-                    @inIdUsuarioAdmin  = @inIdUsuarioSistema,
-                    @inIPOrigen        = @inIPOrigen,
-                    @outResultCode     = @vResultCode OUTPUT;
+                    @inMontoFijo = @vAsocMonto,
+                    @inFechaInicio = @vFechaInicioAsoc,
+                    @inIdUsuarioAdmin = @inIdUsuarioSistema,
+                    @inIPOrigen = @inIPOrigen,
+                    @outResultCode = @vResultCode OUTPUT;
             END;
 
             SET @vAsocFila = @vAsocFila + 1;
         END;
 
-        -- ==========================
-        -- Desasociar deducciones
-        -- ==========================
+        --==========================
+        --Desasociar deducciones
+        --==========================
         DECLARE @tDesasociarDeducciones TABLE (
             Fila INT IDENTITY(1,1),
             ValorDocumento VARCHAR(30),
@@ -1097,20 +1097,20 @@ BEGIN
             IF (@vDesIdTipoDed IS NOT NULL)
             BEGIN
                 EXEC dbo.sp_DesasociarDeduccion
-                    @inValorDocumento  = @vDesDoc,
+                    @inValorDocumento = @vDesDoc,
                     @inIdTipoDeduccion = @vDesIdTipoDed,
-                    @inFechaFin        = @vFechaActual,
-                    @inIdUsuarioAdmin  = @inIdUsuarioSistema,
-                    @inIPOrigen        = @inIPOrigen,
-                    @outResultCode     = @vResultCode OUTPUT;
+                    @inFechaFin = @vFechaActual,
+                    @inIdUsuarioAdmin = @inIdUsuarioSistema,
+                    @inIPOrigen = @inIPOrigen,
+                    @outResultCode = @vResultCode OUTPUT;
             END;
 
             SET @vDesFila = @vDesFila + 1;
         END;
 
-        -- ==========================
-        -- Procesar asistencias
-        -- ==========================
+        --==========================
+        --Procesar asistencias
+        --==========================
         DECLARE @tMarcas TABLE (
             Fila INT IDENTITY(1,1),
             ValorDocumento VARCHAR(30),
@@ -1143,24 +1143,24 @@ BEGIN
             WHERE (Fila = @vMarcaFila);
 
             EXEC dbo.sp_ProcesarAsistencia
-                @inValorDocumento   = @vMarcaDoc,
+                @inValorDocumento = @vMarcaDoc,
                 @inFechaHoraEntrada = @vMarcaEntrada,
-                @inFechaHoraSalida  = @vMarcaSalida,
+                @inFechaHoraSalida = @vMarcaSalida,
                 @inIdUsuarioSistema = @inIdUsuarioSistema,
-                @inIPOrigen         = @inIPOrigen,
-                @outResultCode      = @vResultCode OUTPUT;
+                @inIPOrigen = @inIPOrigen,
+                @outResultCode = @vResultCode OUTPUT;
 
             SET @vMarcaFila = @vMarcaFila + 1;
         END;
 
-        -- ==========================
-        -- Si es jueves: asignar jornadas para la próxima semana y cerrar semana
-        -- ==========================
+        --==========================
+        --Si es jueves: asignar jornadas para la próxima semana y cerrar semana
+        --==========================
         IF (@vEsJueves = 1)
         BEGIN
             SET @vFechaViernes = DATEADD(DAY, 1, @vFechaActual);
 
-            -- Asignar jornadas
+            --Asignar jornadas
             DECLARE @tJornadas TABLE (
                 Fila INT IDENTITY(1,1),
                 ValorDocumento VARCHAR(30),
@@ -1200,7 +1200,7 @@ BEGIN
 
                 IF (@vJorIdTipo IS NOT NULL) AND (@vJorIdEmpleado IS NOT NULL)
                 BEGIN
-                    -- Si ya existe, actualizar; si no, insertar
+                    --Si ya existe, actualizar; si no, insertar
                     IF EXISTS (
                         SELECT 1
                         FROM dbo.JornadaEmpleadoSemana AS jes
@@ -1227,14 +1227,14 @@ BEGIN
                 SET @vJorFila = @vJorFila + 1;
             END;
 
-            -- Cerrar semana
+            --Cerrar semana
             EXEC dbo.sp_CierreSemanal
-                @inFechaJueves      = @vFechaActual,
+                @inFechaJueves = @vFechaActual,
                 @inIdUsuarioSistema = @inIdUsuarioSistema,
-                @inIPOrigen         = @inIPOrigen,
-                @outResultCode      = @vResultCode OUTPUT;
+                @inIPOrigen = @inIPOrigen,
+                @outResultCode = @vResultCode OUTPUT;
 
-            -- Apertura de mes si el viernes siguiente es el primer viernes del mes
+            --Apertura de mes si el viernes siguiente es el primer viernes del mes
             SET @vEsUltimoJue = CASE
                 WHEN (MONTH(@vFechaViernes) <> MONTH(@vFechaActual)) THEN 1
                 ELSE 0
@@ -1246,26 +1246,26 @@ BEGIN
                 SET @vNumJuevesSig = dbo.fn_ContarJueves(@vFechaViernes, @vFechaFinMesSig);
 
                 EXEC dbo.sp_AperturaMes
-                    @inFechaInicioMes  = @vFechaViernes,
-                    @inFechaFinMes     = @vFechaFinMesSig,
-                    @inCantidadJueves  = @vNumJuevesSig,
-                    @outResultCode     = @vResultCode OUTPUT;
+                    @inFechaInicioMes = @vFechaViernes,
+                    @inFechaFinMes = @vFechaFinMesSig,
+                    @inCantidadJueves = @vNumJuevesSig,
+                    @outResultCode = @vResultCode OUTPUT;
             END;
 
-            -- Apertura de la siguiente semana
+            --Apertura de la siguiente semana
             SET @vFechaFinSemana = DATEADD(DAY, 6, @vFechaViernes);
 
             EXEC dbo.sp_AperturaSemana
                 @inFechaInicioSemana = @vFechaViernes,
-                @inFechaFinSemana    = @vFechaFinSemana,
-                @outResultCode       = @vResultCode OUTPUT;
+                @inFechaFinSemana = @vFechaFinSemana,
+                @outResultCode = @vResultCode OUTPUT;
 
         END;
 
-        -- Avanzar a la siguiente fecha
+        --Avanzar a la siguiente fecha
         SET @vFilaActual = @vFilaActual + 1;
 
-        -- Limpiar tablas variables de esta iteración
+        --Limpiar tablas variables de esta iteración
         DELETE FROM @tNuevosEmpleados;
         DELETE FROM @tEliminarEmpleados;
         DELETE FROM @tAsociarDeducciones;

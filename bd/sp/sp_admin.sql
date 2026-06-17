@@ -24,17 +24,17 @@ IF OBJECT_ID('dbo.sp_InsertarEmpleado', 'P') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.sp_InsertarEmpleado
-    @inNombre           VARCHAR(150)
-  , @inValorDocumento   VARCHAR(30)
-  , @inNombrePuesto     VARCHAR(100)
-  , @inUsername         VARCHAR(50)
-  , @inPassword         VARCHAR(255)
-  , @inCuentaBancaria   VARCHAR(30)
-  , @inFechaIngreso     DATE
-  , @inIdUsuarioAdmin   INT
-  , @inIPOrigen         VARCHAR(45) = '127.0.0.1'
-  , @outIdEmpleadoNuevo INT OUTPUT
-  , @outResultCode      INT OUTPUT
+    @inNombre VARCHAR(150)
+  ,@inValorDocumento VARCHAR(30)
+  ,@inNombrePuesto VARCHAR(100)
+  ,@inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255)
+  ,@inCuentaBancaria VARCHAR(30)
+  ,@inFechaIngreso DATE
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outIdEmpleadoNuevo INT OUTPUT
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -42,10 +42,10 @@ BEGIN
     SET @outResultCode = 0;
     SET @outIdEmpleadoNuevo = NULL;
 
-    DECLARE @vIdPuesto        INT;
-    DECLARE @vIdUsuarioNuevo  INT;
-    DECLARE @vParametros      NVARCHAR(MAX);
-    DECLARE @vDatosDespues    NVARCHAR(MAX);
+    DECLARE @vIdPuesto INT;
+    DECLARE @vIdUsuarioNuevo INT;
+    DECLARE @vParametros NVARCHAR(MAX);
+    DECLARE @vDatosDespues NVARCHAR(MAX);
 
     SELECT
         @vIdPuesto = p.IdPuesto
@@ -94,8 +94,8 @@ BEGIN
         )
         VALUES (
             @vIdUsuarioNuevo
-          , @inUsername
-          , @inPassword
+          ,@inUsername
+          ,@inPassword
           , 2
           , 1
         );
@@ -111,11 +111,11 @@ BEGIN
         )
         VALUES (
             @inNombre
-          , @inValorDocumento
-          , @vIdPuesto
-          , @vIdUsuarioNuevo
-          , @inCuentaBancaria
-          , @inFechaIngreso
+          ,@inValorDocumento
+          ,@vIdPuesto
+          ,@vIdUsuarioNuevo
+          ,@inCuentaBancaria
+          ,@inFechaIngreso
           , 1
         );
 
@@ -123,19 +123,19 @@ BEGIN
 
         SET @vParametros = CONCAT(
             N'{"valorDocumento":"'
-          , @inValorDocumento
+          ,@inValorDocumento
           , N'"}'
         );
 
         SET @vDatosDespues = CONCAT(
             N'{"idEmpleado":'
-          , @outIdEmpleadoNuevo
+          ,@outIdEmpleadoNuevo
           , N',"nombre":"'
-          , @inNombre
+          ,@inNombre
           , N'","valorDocumento":"'
-          , @inValorDocumento
+          ,@inValorDocumento
           , N'","puesto":"'
-          , @inNombrePuesto
+          ,@inNombrePuesto
           , N'"}'
         );
 
@@ -149,9 +149,9 @@ BEGIN
         VALUES (
             @inIdUsuarioAdmin
           , 6
-          , @inIPOrigen
-          , @vParametros
-          , @vDatosDespues
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosDespues
         );
 
         COMMIT TRANSACTION;
@@ -185,24 +185,24 @@ GO
 
 CREATE PROCEDURE dbo.sp_EliminarEmpleado
     @inValorDocumento VARCHAR(30)
-  , @inIdUsuarioAdmin INT
-  , @inIPOrigen       VARCHAR(45) = '127.0.0.1'
-  , @outResultCode    INT OUTPUT
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     SET @outResultCode = 0;
 
-    DECLARE @vIdEmpleado   INT;
-    DECLARE @vIdUsuario    INT;
-    DECLARE @vDatosAntes   NVARCHAR(MAX);
-    DECLARE @vParametros   NVARCHAR(MAX);
+    DECLARE @vIdEmpleado INT;
+    DECLARE @vIdUsuario INT;
+    DECLARE @vDatosAntes NVARCHAR(MAX);
+    DECLARE @vParametros NVARCHAR(MAX);
 
     SELECT
         @vIdEmpleado = e.IdEmpleado
-      , @vIdUsuario  = e.IdUsuario
-      , @vDatosAntes = CONCAT(
+      ,@vIdUsuario = e.IdUsuario
+      ,@vDatosAntes = CONCAT(
             N'{"idEmpleado":'
           , e.IdEmpleado
           , N',"nombre":"'
@@ -241,7 +241,7 @@ BEGIN
 
         SET @vParametros = CONCAT(
             N'{"valorDocumento":"'
-          , @inValorDocumento
+          ,@inValorDocumento
           , N'"}'
         );
 
@@ -255,9 +255,9 @@ BEGIN
         VALUES (
             @inIdUsuarioAdmin
           , 10
-          , @inIPOrigen
-          , @vParametros
-          , @vDatosAntes
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosAntes
         );
 
         COMMIT TRANSACTION;
@@ -290,22 +290,22 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_AsociarDeduccion
-    @inValorDocumento  VARCHAR(30)
-  , @inIdTipoDeduccion INT
-  , @inMontoFijo       DECIMAL(12,2)
-  , @inFechaInicio     DATE
-  , @inIdUsuarioAdmin  INT
-  , @inIPOrigen        VARCHAR(45) = '127.0.0.1'
-  , @outResultCode     INT OUTPUT
+    @inValorDocumento VARCHAR(30)
+  ,@inIdTipoDeduccion INT
+  ,@inMontoFijo DECIMAL(12,2)
+  ,@inFechaInicio DATE
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     SET @outResultCode = 0;
 
-    DECLARE @vIdEmpleado  INT;
-    DECLARE @vValor       DECIMAL(10,4);
-    DECLARE @vParametros  NVARCHAR(MAX);
+    DECLARE @vIdEmpleado INT;
+    DECLARE @vValor DECIMAL(10,4);
+    DECLARE @vParametros NVARCHAR(MAX);
     DECLARE @vDatosDespues NVARCHAR(MAX);
 
     SELECT
@@ -363,27 +363,27 @@ BEGIN
         )
         VALUES (
             @vIdEmpleado
-          , @inIdTipoDeduccion
-          , @vValor
-          , @inFechaInicio
+          ,@inIdTipoDeduccion
+          ,@vValor
+          ,@inFechaInicio
           , NULL
         );
 
         SET @vParametros = CONCAT(
             N'{"valorDocumento":"'
-          , @inValorDocumento
+          ,@inValorDocumento
           , N'","idTipoDeduccion":'
-          , @inIdTipoDeduccion
+          ,@inIdTipoDeduccion
           , N'}'
         );
 
         SET @vDatosDespues = CONCAT(
             N'{"idEmpleado":'
-          , @vIdEmpleado
+          ,@vIdEmpleado
           , N',"idTipoDeduccion":'
-          , @inIdTipoDeduccion
+          ,@inIdTipoDeduccion
           , N',"valor":'
-          , @vValor
+          ,@vValor
           , N'}'
         );
 
@@ -397,9 +397,9 @@ BEGIN
         VALUES (
             @inIdUsuarioAdmin
           , 8
-          , @inIPOrigen
-          , @vParametros
-          , @vDatosDespues
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosDespues
         );
 
         COMMIT TRANSACTION;
@@ -432,12 +432,12 @@ END;
 GO
 
 CREATE PROCEDURE dbo.sp_DesasociarDeduccion
-    @inValorDocumento  VARCHAR(30)
-  , @inIdTipoDeduccion INT
-  , @inFechaFin        DATE
-  , @inIdUsuarioAdmin  INT
-  , @inIPOrigen        VARCHAR(45) = '127.0.0.1'
-  , @outResultCode     INT OUTPUT
+    @inValorDocumento VARCHAR(30)
+  ,@inIdTipoDeduccion INT
+  ,@inFechaFin DATE
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -492,9 +492,9 @@ BEGIN
 
         SET @vParametros = CONCAT(
             N'{"valorDocumento":"'
-          , @inValorDocumento
+          ,@inValorDocumento
           , N'","idTipoDeduccion":'
-          , @inIdTipoDeduccion
+          ,@inIdTipoDeduccion
           , N'}'
         );
 
@@ -508,9 +508,9 @@ BEGIN
         VALUES (
             @inIdUsuarioAdmin
           , 8
-          , @inIPOrigen
-          , @vParametros
-          , @vDatosAntes
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosAntes
         );
 
         COMMIT TRANSACTION;
