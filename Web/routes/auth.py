@@ -63,6 +63,21 @@ def call_login(username, password):
     return output
 
 
+def obtener_id_empleado(id_usuario):
+    sql = """
+        SELECT e.IdEmpleado
+        FROM dbo.Empleado AS e
+        WHERE (e.IdUsuario = ?)
+          AND (e.Activo = 1);
+    """
+    result_sets, _ = execute_with_result_sets(sql, [id_usuario])
+
+    if not result_sets or not result_sets[0]:
+        return None
+
+    return result_sets[0][0]["IdEmpleado"]
+
+
 def login_required(view):
     @wraps(view)
     def wrapped_view(**kwargs):
@@ -123,6 +138,7 @@ def login():
             if session["tipo_usuario"] == 1:
                 return redirect(url_for("admin.empleados"))
 
+            session["id_empleado"] = obtener_id_empleado(session["id_usuario"])
             return redirect(url_for("empleado.planilla_semanal"))
 
         flash(f"Login no exitoso. ResultCode: {result_code}", "error")

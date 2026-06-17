@@ -94,14 +94,17 @@ def consultar_deducciones_mes(id_empleado, id_mes=None):
 @login_required
 def planilla_semanal():
     id_semana = request.args.get("id_semana", type=int)
-    id_empleado = None
+    id_empleado = session.get("id_empleado")
     planillas = []
     deducciones = []
     horas = []
     result_code = None
 
     try:
-        id_empleado = obtener_id_empleado(session.get("id_usuario"))
+        if id_empleado is None:
+            id_empleado = obtener_id_empleado(session.get("id_usuario"))
+            session["id_empleado"] = id_empleado
+
         resumen_sets, resumen_output = consultar_planilla_semanal(id_empleado, id_semana)
         deducciones_sets, _ = consultar_deducciones_semana(id_empleado, id_semana)
         horas_sets, _ = consultar_horas_semana(id_empleado, id_semana)
@@ -127,13 +130,16 @@ def planilla_semanal():
 @login_required
 def planilla_mensual():
     id_mes = request.args.get("id_mes", type=int)
-    id_empleado = None
+    id_empleado = session.get("id_empleado")
     planillas = []
     deducciones = []
     result_code = None
 
     try:
-        id_empleado = obtener_id_empleado(session.get("id_usuario"))
+        if id_empleado is None:
+            id_empleado = obtener_id_empleado(session.get("id_usuario"))
+            session["id_empleado"] = id_empleado
+
         resumen_sets, resumen_output = consultar_planilla_mensual(id_empleado, id_mes)
         deducciones_sets, _ = consultar_deducciones_mes(id_empleado, id_mes)
         planillas = resumen_sets[0] if resumen_sets else []
