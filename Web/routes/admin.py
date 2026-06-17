@@ -1,39 +1,22 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from routes.auth import admin_required, execute_with_result_sets, log_event
+from routes.auth import admin_required, call_procedure, log_event
 
 
 admin_bp = Blueprint("admin", __name__)
 
 
 def listar_empleados(nombre=None, documento=None):
-    sql = """
-        DECLARE @outResultCode INT;
-
-        EXEC dbo.sp_ListarEmpleadosConFiltro
-            @inNombre = ?
-          , @inValorDocumento = ?
-          , @inSoloActivos = 1
-          , @outResultCode = @outResultCode OUTPUT;
-
-        SELECT @outResultCode AS ResultCode;
-    """
-    result_sets, output = execute_with_result_sets(sql, [nombre, documento])
+    result_sets, output = call_procedure(
+        "sp_WebListarEmpleadosConFiltro",
+        [nombre, documento, 1, None, None],
+    )
     empleados = result_sets[0] if result_sets else []
     return empleados, output.get("ResultCode")
 
 
 def obtener_empleado(id_empleado):
-    sql = """
-        DECLARE @outResultCode INT;
-
-        EXEC dbo.sp_ObtenerEmpleado
-            @inIdEmpleado = ?
-          , @outResultCode = @outResultCode OUTPUT;
-
-        SELECT @outResultCode AS ResultCode;
-    """
-    result_sets, output = execute_with_result_sets(sql, [id_empleado])
+    result_sets, output = call_procedure("sp_WebObtenerEmpleado", [id_empleado, None])
     empleados = result_sets[0] if result_sets else []
     empleado = empleados[0] if empleados else None
     return empleado, output.get("ResultCode")

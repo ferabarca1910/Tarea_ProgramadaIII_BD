@@ -11,6 +11,46 @@ IF OBJECT_ID('dbo.sp_ConsultarDetalleDeduccionesMes', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_ConsultarDetalleDeduccionesMes;
 GO
 
+IF OBJECT_ID('dbo.sp_WebConsultarDetalleDeduccionesMes', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebConsultarDetalleDeduccionesMes;
+GO
+
+IF OBJECT_ID('dbo.sp_WebConsultarPlanillaMensual', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebConsultarPlanillaMensual;
+GO
+
+IF OBJECT_ID('dbo.sp_WebConsultarDetalleHorasSemana', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebConsultarDetalleHorasSemana;
+GO
+
+IF OBJECT_ID('dbo.sp_WebConsultarDetalleDeduccionesSemana', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebConsultarDetalleDeduccionesSemana;
+GO
+
+IF OBJECT_ID('dbo.sp_WebConsultarPlanillaSemanal', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebConsultarPlanillaSemanal;
+GO
+
+IF OBJECT_ID('dbo.sp_WebRegistrarEventoBitacora', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebRegistrarEventoBitacora;
+GO
+
+IF OBJECT_ID('dbo.sp_WebObtenerEmpleadoPorUsuario', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebObtenerEmpleadoPorUsuario;
+GO
+
+IF OBJECT_ID('dbo.sp_WebObtenerEmpleado', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebObtenerEmpleado;
+GO
+
+IF OBJECT_ID('dbo.sp_WebListarEmpleadosConFiltro', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebListarEmpleadosConFiltro;
+GO
+
+IF OBJECT_ID('dbo.sp_WebLogin', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebLogin;
+GO
+
 IF OBJECT_ID('dbo.sp_ConsultarPlanillaMensual', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_ConsultarPlanillaMensual;
 GO
@@ -892,6 +932,265 @@ BEGIN
         );
 
     END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebLogin
+    @inUsername      VARCHAR(50)
+  , @inPassword      VARCHAR(255)
+  , @inIPOrigen      VARCHAR(45) = '127.0.0.1'
+  , @outResultCode   INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @vIdUsuario   INT;
+    DECLARE @vTipoUsuario TINYINT;
+
+    EXEC dbo.sp_Login
+        @inUsername = @inUsername
+      , @inPassword = @inPassword
+      , @inIPOrigen = @inIPOrigen
+      , @outIdUsuario = @vIdUsuario OUTPUT
+      , @outTipoUsuario = @vTipoUsuario OUTPUT
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT
+        @outResultCode AS ResultCode
+      , @vIdUsuario AS IdUsuario
+      , @vTipoUsuario AS TipoUsuario;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebListarEmpleadosConFiltro
+    @inNombre             VARCHAR(150) = NULL
+  , @inValorDocumento     VARCHAR(30) = NULL
+  , @inSoloActivos        BIT = 1
+  , @inIdUsuarioConsulta  INT = NULL
+  , @inIPOrigen           VARCHAR(45) = '127.0.0.1'
+  , @outResultCode        INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ListarEmpleadosConFiltro
+        @inNombre = @inNombre
+      , @inValorDocumento = @inValorDocumento
+      , @inSoloActivos = @inSoloActivos
+      , @inIdUsuarioConsulta = @inIdUsuarioConsulta
+      , @inIPOrigen = @inIPOrigen
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebObtenerEmpleado
+    @inIdEmpleado      INT = NULL
+  , @inValorDocumento  VARCHAR(30) = NULL
+  , @outResultCode     INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ObtenerEmpleado
+        @inIdEmpleado = @inIdEmpleado
+      , @inValorDocumento = @inValorDocumento
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebObtenerEmpleadoPorUsuario
+    @inIdUsuario     INT
+  , @outResultCode   INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            e.IdEmpleado
+          , e.Nombre
+          , e.ValorDocumentoIdentidad
+          , e.IdUsuario
+        FROM dbo.Empleado AS e
+        WHERE (e.IdUsuario = @inIdUsuario)
+          AND (e.Activo = 1);
+
+        SELECT @outResultCode AS ResultCode;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_WebObtenerEmpleadoPorUsuario'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+        SELECT @outResultCode AS ResultCode;
+
+    END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebRegistrarEventoBitacora
+    @inIdUsuario      INT
+  , @inIdTipoEvento  INT
+  , @inIPOrigen      VARCHAR(45)
+  , @inParametros    NVARCHAR(MAX) = NULL
+  , @inDatosAntes    NVARCHAR(MAX) = NULL
+  , @inDatosDespues  NVARCHAR(MAX) = NULL
+  , @outResultCode   INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario
+          , IdTipoEvento
+          , IPOrigen
+          , Parametros
+          , DatosAntes
+          , DatosDespues
+        )
+        VALUES (
+            @inIdUsuario
+          , @inIdTipoEvento
+          , @inIPOrigen
+          , @inParametros
+          , @inDatosAntes
+          , @inDatosDespues
+        );
+
+        SELECT @outResultCode AS ResultCode;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_WebRegistrarEventoBitacora'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+        SELECT @outResultCode AS ResultCode;
+
+    END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebConsultarPlanillaSemanal
+    @inIdEmpleado        INT
+  , @inIdSemanaPlanilla  INT = NULL
+  , @outResultCode       INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ConsultarPlanillaSemanal
+        @inIdEmpleado = @inIdEmpleado
+      , @inIdSemanaPlanilla = @inIdSemanaPlanilla
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebConsultarDetalleDeduccionesSemana
+    @inIdEmpleado        INT
+  , @inIdSemanaPlanilla  INT = NULL
+  , @outResultCode       INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ConsultarDetalleDeduccionesSemana
+        @inIdEmpleado = @inIdEmpleado
+      , @inIdSemanaPlanilla = @inIdSemanaPlanilla
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebConsultarDetalleHorasSemana
+    @inIdEmpleado        INT
+  , @inIdSemanaPlanilla  INT = NULL
+  , @outResultCode       INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ConsultarDetalleHorasSemana
+        @inIdEmpleado = @inIdEmpleado
+      , @inIdSemanaPlanilla = @inIdSemanaPlanilla
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebConsultarPlanillaMensual
+    @inIdEmpleado     INT
+  , @inIdMesPlanilla  INT = NULL
+  , @outResultCode    INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ConsultarPlanillaMensual
+        @inIdEmpleado = @inIdEmpleado
+      , @inIdMesPlanilla = @inIdMesPlanilla
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebConsultarDetalleDeduccionesMes
+    @inIdEmpleado     INT
+  , @inIdMesPlanilla  INT = NULL
+  , @outResultCode    INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ConsultarDetalleDeduccionesMes
+        @inIdEmpleado = @inIdEmpleado
+      , @inIdMesPlanilla = @inIdMesPlanilla
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
 END;
 GO
 

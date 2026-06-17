@@ -42,71 +42,49 @@ def execute_with_result_sets(sql, params=None):
     return result_sets, output
 
 
+def call_procedure(procedure_name, params=None):
+    params = params or []
+    placeholders = ", ".join("?" for _ in params)
+    sql = f"{{CALL dbo.{procedure_name} ({placeholders})}}"
+
+    if not placeholders:
+        sql = f"{{CALL dbo.{procedure_name}}}"
+
+    return execute_with_result_sets(sql, params)
+
+
 def log_event(id_tipo_evento, parametros=None, datos_antes=None, datos_despues=None, id_usuario=None):
     usuario = id_usuario or session.get("id_usuario")
 
     if usuario is None:
         return
 
-    sql = """
-        INSERT INTO dbo.BitacoraEvento (
-            IdUsuario
-          , IdTipoEvento
-          , IPOrigen
-          , Parametros
-          , DatosAntes
-          , DatosDespues
-        )
-        VALUES (?, ?, ?, ?, ?, ?);
-    """
-    values = [
-        usuario,
-        id_tipo_evento,
-        request.remote_addr or "127.0.0.1",
-        json.dumps(parametros, default=str) if parametros is not None else None,
-        json.dumps(datos_antes, default=str) if datos_antes is not None else None,
-        json.dumps(datos_despues, default=str) if datos_despues is not None else None,
-    ]
-
     try:
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, values)
-            conn.commit()
+        call_procedure(
+            "sp_WebRegistrarEventoBitacora",
+            [
+                usuario,
+                id_tipo_evento,
+                request.remote_addr or "127.0.0.1",
+                json.dumps(parametros, default=str) if parametros is not None else None,
+                json.dumps(datos_antes, default=str) if datos_antes is not None else None,
+                json.dumps(datos_despues, default=str) if datos_despues is not None else None,
+            ],
+        )
     except Exception:
         current_app.logger.exception("No se pudo registrar evento en bitacora")
 
 
 def call_login(username, password):
-    sql = """
-        DECLARE @outIdUsuario INT;
-        DECLARE @outTipoUsuario TINYINT;
-        DECLARE @outResultCode INT;
-
-        EXEC dbo.sp_Login
-            @inUsername = ?
-          , @inPassword = ?
-          , @outIdUsuario = @outIdUsuario OUTPUT
-          , @outTipoUsuario = @outTipoUsuario OUTPUT
-          , @outResultCode = @outResultCode OUTPUT;
-
-        SELECT
-            @outResultCode AS ResultCode
-          , @outIdUsuario AS IdUsuario
-          , @outTipoUsuario AS TipoUsuario;
-    """
-    _, output = execute_with_result_sets(sql, [username, password])
+    _, output = call_procedure(
+        "sp_WebLogin",
+        [username, password, request.remote_addr or "127.0.0.1"],
+    )
     return output
 
 
 def obtener_id_empleado(id_usuario):
-    sql = """
-        SELECT e.IdEmpleado
-        FROM dbo.Empleado AS e
-        WHERE (e.IdUsuario = ?)
-          AND (e.Activo = 1);
-    """
-    result_sets, _ = execute_with_result_sets(sql, [id_usuario])
+    result_sets, _ = call_procedure("sp_WebObtenerEmpleadoPorUsuario", [id_usuario])
 
     if not result_sets or not result_sets[0]:
         return None
