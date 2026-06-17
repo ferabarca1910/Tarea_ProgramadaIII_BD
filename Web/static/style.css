@@ -51,6 +51,23 @@ a {
     color: var(--primary);
 }
 
+.impersonation-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 42px;
+    padding: 8px 18px;
+    background: #fff8e6;
+    border-bottom: 1px solid #f3d58b;
+    color: #6f4d00;
+}
+
+.impersonation-bar a {
+    color: var(--primary);
+    font-weight: 700;
+}
+
 .page {
     width: min(1180px, calc(100% - 32px));
     margin: 24px auto 48px;
@@ -152,6 +169,15 @@ button:hover,
     background: var(--primary-dark);
 }
 
+.inline-form {
+    margin: 0;
+}
+
+.inline-form button {
+    min-height: 32px;
+    padding: 6px 10px;
+}
+
 .button.secondary {
     background: #ffffff;
     color: var(--primary);
@@ -213,6 +239,11 @@ th {
 
     .nav {
         flex-wrap: wrap;
+    }
+
+    .impersonation-bar {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .filters {

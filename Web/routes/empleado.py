@@ -1,9 +1,16 @@
-from flask import Blueprint, flash, render_template, request, session
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from routes.auth import execute_with_result_sets, login_required
 
 
 empleado_bp = Blueprint("empleado", __name__)
+
+
+def obtener_id_empleado_actual():
+    if session.get("tipo_usuario") == 1:
+        return session.get("id_empleado_impersonado")
+
+    return session.get("id_empleado")
 
 
 def obtener_id_empleado(id_usuario):
@@ -94,7 +101,7 @@ def consultar_deducciones_mes(id_empleado, id_mes=None):
 @login_required
 def planilla_semanal():
     id_semana = request.args.get("id_semana", type=int)
-    id_empleado = session.get("id_empleado")
+    id_empleado = obtener_id_empleado_actual()
     planillas = []
     deducciones = []
     horas = []
@@ -102,6 +109,10 @@ def planilla_semanal():
 
     try:
         if id_empleado is None:
+            if session.get("tipo_usuario") == 1:
+                flash("Seleccione un empleado para impersonar.", "error")
+                return redirect(url_for("admin.empleados"))
+
             id_empleado = obtener_id_empleado(session.get("id_usuario"))
             session["id_empleado"] = id_empleado
 
@@ -130,13 +141,17 @@ def planilla_semanal():
 @login_required
 def planilla_mensual():
     id_mes = request.args.get("id_mes", type=int)
-    id_empleado = session.get("id_empleado")
+    id_empleado = obtener_id_empleado_actual()
     planillas = []
     deducciones = []
     result_code = None
 
     try:
         if id_empleado is None:
+            if session.get("tipo_usuario") == 1:
+                flash("Seleccione un empleado para impersonar.", "error")
+                return redirect(url_for("admin.empleados"))
+
             id_empleado = obtener_id_empleado(session.get("id_usuario"))
             session["id_empleado"] = id_empleado
 
