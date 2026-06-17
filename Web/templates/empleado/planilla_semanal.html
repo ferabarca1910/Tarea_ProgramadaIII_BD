@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Planilla semanal - Planilla Obrera{% endblock %}
+
+{% block content %}
+<section class="toolbar">
+    <div>
+        <h1>Planilla semanal</h1>
+        <p>Empleado: {{ id_empleado }} | ResultCode: {{ result_code }}</p>
+    </div>
+
+    <form method="get" class="filters">
+        <label>
+            Semana
+            <input type="number" name="id_semana" value="{{ id_semana or '' }}" min="1">
+        </label>
+        <button type="submit">Consultar</button>
+        <a class="button secondary" href="{{ url_for('empleado.planilla_semanal') }}">Todas</a>
+    </form>
+</section>
+
+<section class="table-wrap">
+    <h2>Resumen</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Semana</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Bruto</th>
+                <th>Deducciones</th>
+                <th>Neto</th>
+                <th>Ord.</th>
+                <th>Extra</th>
+                <th>Doble</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for planilla in planillas %}
+                <tr>
+                    <td>{{ planilla.IdSemanaPlanilla }}</td>
+                    <td>{{ planilla.FechaInicio }}</td>
+                    <td>{{ planilla.FechaFin }}</td>
+                    <td>{{ "%.2f"|format(planilla.SalarioBruto) }}</td>
+                    <td>{{ "%.2f"|format(planilla.TotalDeducciones) }}</td>
+                    <td>{{ "%.2f"|format(planilla.SalarioNeto) }}</td>
+                    <td>{{ planilla.HorasOrdinarias }}</td>
+                    <td>{{ planilla.HorasExtraNormales }}</td>
+                    <td>{{ planilla.HorasExtraDobles }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="9" class="empty">No hay planillas semanales.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="table-wrap">
+    <h2>Horas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>Ord.</th>
+                <th>Extra</th>
+                <th>Doble</th>
+                <th>Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for marca in horas %}
+                <tr>
+                    <td>{{ marca.FechaOperacion }}</td>
+                    <td>{{ marca.FechaHoraEntrada }}</td>
+                    <td>{{ marca.FechaHoraSalida }}</td>
+                    <td>{{ "%.2f"|format(marca.HorasOrdinarias) }}</td>
+                    <td>{{ "%.2f"|format(marca.HorasExtraNormales) }}</td>
+                    <td>{{ "%.2f"|format(marca.HorasExtraDobles) }}</td>
+                    <td>{{ "%.2f"|format(marca.MontoGenerado) }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7" class="empty">No hay detalle de horas.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="table-wrap">
+    <h2>Deducciones</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Deduccion</th>
+                <th>Movimiento</th>
+                <th>Cantidad</th>
+                <th>Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for deduccion in deducciones %}
+                <tr>
+                    <td>{{ deduccion.NombreDeduccion }}</td>
+                    <td>{{ deduccion.NombreMovimiento }}</td>
+                    <td>{{ deduccion.CantidadMovimientos }}</td>
+                    <td>{{ "%.2f"|format(deduccion.MontoTotal) }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4" class="empty">No hay deducciones semanales.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

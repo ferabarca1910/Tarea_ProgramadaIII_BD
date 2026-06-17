@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Planilla mensual - Planilla Obrera{% endblock %}
+
+{% block content %}
+<section class="toolbar">
+    <div>
+        <h1>Planilla mensual</h1>
+        <p>Empleado: {{ id_empleado }} | ResultCode: {{ result_code }}</p>
+    </div>
+
+    <form method="get" class="filters">
+        <label>
+            Mes planilla
+            <input type="number" name="id_mes" value="{{ id_mes or '' }}" min="1">
+        </label>
+        <button type="submit">Consultar</button>
+        <a class="button secondary" href="{{ url_for('empleado.planilla_mensual') }}">Todos</a>
+    </form>
+</section>
+
+<section class="table-wrap">
+    <h2>Resumen</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Mes</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Jueves</th>
+                <th>Bruto</th>
+                <th>Deducciones</th>
+                <th>Neto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for planilla in planillas %}
+                <tr>
+                    <td>{{ planilla.IdMesPlanilla }}</td>
+                    <td>{{ planilla.FechaInicio }}</td>
+                    <td>{{ planilla.FechaFin }}</td>
+                    <td>{{ planilla.CantidadJueves }}</td>
+                    <td>{{ "%.2f"|format(planilla.SalarioBrutoMensual) }}</td>
+                    <td>{{ "%.2f"|format(planilla.TotalDeduccionesMensual) }}</td>
+                    <td>{{ "%.2f"|format(planilla.SalarioNetoMensual) }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7" class="empty">No hay planillas mensuales.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="table-wrap">
+    <h2>Deducciones</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Deduccion</th>
+                <th>Obligatoria</th>
+                <th>Porcentual</th>
+                <th>Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for deduccion in deducciones %}
+                <tr>
+                    <td>{{ deduccion.NombreDeduccion }}</td>
+                    <td>{{ "Si" if deduccion.EsObligatoria else "No" }}</td>
+                    <td>{{ "Si" if deduccion.EsPorcentual else "No" }}</td>
+                    <td>{{ "%.2f"|format(deduccion.MontoTotal) }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4" class="empty">No hay deducciones mensuales.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
