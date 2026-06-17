@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Nuevo empleado" if modo == "nuevo" else "Editar empleado" }} - Planilla Obrera{% endblock %}
+
+{% block content %}
+<section class="toolbar">
+    <div>
+        <h1>{{ "Nuevo empleado" if modo == "nuevo" else "Editar empleado" }}</h1>
+        <p>ResultCode: {{ result_code if result_code is not none else "-" }}</p>
+    </div>
+
+    <a class="button secondary" href="{{ url_for('admin.empleados') }}">Volver</a>
+</section>
+
+<section class="panel form-panel">
+    <form method="post" class="form-grid">
+        <label>
+            Nombre
+            <input type="text" name="nombre" value="{{ empleado.Nombre or '' }}" required>
+        </label>
+
+        <label>
+            Documento
+            <input type="text" name="valor_documento" value="{{ empleado.ValorDocumentoIdentidad or '' }}" required>
+        </label>
+
+        <label>
+            Puesto
+            <select name="nombre_puesto" required>
+                <option value="">Seleccione</option>
+                {% for puesto in puestos %}
+                    {% set selected = empleado.NombrePuesto == puesto.Nombre %}
+                    <option value="{{ puesto.Nombre }}" {% if selected %}selected{% endif %}>
+                        {{ puesto.Nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            Usuario
+            <input type="text" name="username" value="{{ empleado.Username or '' }}" required>
+        </label>
+
+        <label>
+            Password
+            <input type="password" name="password" {% if modo == "nuevo" %}required{% endif %}>
+        </label>
+
+        <label>
+            Cuenta bancaria
+            <input type="text" name="cuenta_bancaria" value="{{ empleado.CuentaBancaria or '' }}">
+        </label>
+
+        <label>
+            Fecha ingreso
+            <input type="date" name="fecha_ingreso" value="{{ empleado.FechaIngreso or '' }}" required>
+        </label>
+
+        <label class="check-row">
+            <input type="checkbox" name="activo" {% if empleado.Activo is not defined or empleado.Activo %}checked{% endif %}>
+            Activo
+        </label>
+
+        <div class="form-actions">
+            <button type="submit">{{ "Crear" if modo == "nuevo" else "Guardar" }}</button>
+            <a class="button secondary" href="{{ url_for('admin.empleados') }}">Cancelar</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
