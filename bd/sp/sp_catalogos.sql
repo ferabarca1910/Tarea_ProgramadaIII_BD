@@ -1,191 +1,310 @@
-
 USE PlanillaObrera;
 GO
-IF OBJECT_ID('sp_CargarTiposJornada', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposJornada;
+
+IF OBJECT_ID('dbo.sp_CargarCatalogos', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarCatalogos;
 GO
-CREATE PROCEDURE sp_CargarTiposJornada @xmlData XML
+
+IF OBJECT_ID('dbo.sp_CargarTiposDeduccion', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarTiposDeduccion;
+GO
+
+IF OBJECT_ID('dbo.sp_CargarTiposMovimiento', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarTiposMovimiento;
+GO
+
+IF OBJECT_ID('dbo.sp_CargarTiposEvento', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarTiposEvento;
+GO
+
+IF OBJECT_ID('dbo.sp_CargarUsuarios', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarUsuarios;
+GO
+
+IF OBJECT_ID('dbo.sp_CargarCodigosError', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarCodigosError;
+GO
+
+IF OBJECT_ID('dbo.sp_CargarFeriados', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarFeriados;
+GO
+
+IF OBJECT_ID('dbo.sp_CargarPuestos', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarPuestos;
+GO
+
+IF OBJECT_ID('dbo.sp_CargarTiposJornada', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CargarTiposJornada;
+GO
+
+CREATE PROCEDURE dbo.sp_CargarTiposJornada
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.TipoJornada (IdTipoJornada, Nombre, HoraInicio, HoraFin)
+
+    INSERT INTO dbo.TipoJornada (
+        IdTipoJornada
+      , Nombre
+      , HoraInicio
+      , HoraFin
+    )
     SELECT
-        nodo.value('@id',         'INT'),
-        nodo.value('@Nombre',     'VARCHAR(50)'),
-        CAST(nodo.value('@HoraInicio', 'VARCHAR(10)') AS TIME),
-        CAST(nodo.value('@HoraFin',    'VARCHAR(10)') AS TIME)
-    FROM @xmlData.nodes('/Catalogo/TiposDeJornada/TipoDeJornada') AS T(nodo)
+        nodo.value('@Id',         'INT')
+      , nodo.value('@Nombre',     'VARCHAR(50)')
+      , CAST(nodo.value('@HoraInicio', 'VARCHAR(10)') AS TIME)
+      , CAST(nodo.value('@HoraFin',    'VARCHAR(10)') AS TIME)
+    FROM @inXML.nodes('/Datos/TiposJornada/TipoJornada') AS x(nodo)
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.TipoJornada WHERE IdTipoJornada = nodo.value('@id','INT')
+        SELECT 1
+        FROM dbo.TipoJornada AS tj
+        WHERE (tj.IdTipoJornada = nodo.value('@Id', 'INT'))
     );
-    PRINT 'TiposDeJornada cargados.';
 END;
 GO
 
-IF OBJECT_ID('sp_CargarPuestos', 'P') IS NOT NULL DROP PROCEDURE sp_CargarPuestos;
-GO
-CREATE PROCEDURE sp_CargarPuestos @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarPuestos
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.Puesto (Nombre, SalarioXHora)
+
+    INSERT INTO dbo.Puesto (
+        Nombre
+      , SalarioXHora
+    )
     SELECT
-        nodo.value('@Nombre',       'VARCHAR(100)'),
-        nodo.value('@SalarioXHora', 'DECIMAL(10,2)')
-    FROM @xmlData.nodes('/Catalogo/Puestos/dbo.Puesto') AS T(nodo)
+        nodo.value('@Nombre',       'VARCHAR(100)')
+      , nodo.value('@SalarioXHora', 'DECIMAL(10,2)')
+    FROM @inXML.nodes('/Datos/Puestos/Puesto') AS x(nodo)
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.Puesto WHERE Nombre = nodo.value('@Nombre','VARCHAR(100)')
+        SELECT 1
+        FROM dbo.Puesto AS p
+        WHERE (p.Nombre = nodo.value('@Nombre', 'VARCHAR(100)'))
     );
-    PRINT 'Puestos cargados.';
 END;
 GO
 
-IF OBJECT_ID('sp_CargarFeriados', 'P') IS NOT NULL DROP PROCEDURE sp_CargarFeriados;
-GO
-CREATE PROCEDURE sp_CargarFeriados @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarFeriados
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.Feriado (IdFeriado, Nombre, Fecha)
+
+    INSERT INTO dbo.Feriado (
+        IdFeriado
+      , Nombre
+      , Fecha
+    )
     SELECT
-        nodo.value('@Id',     'INT'),
-        nodo.value('@Nombre', 'VARCHAR(100)'),
-        CONVERT(DATE, nodo.value('@Fecha','VARCHAR(8)'), 112)
-    FROM @xmlData.nodes('/Catalogo/Feriados/dbo.Feriado') AS T(nodo)
+        nodo.value('@Id',     'INT')
+      , nodo.value('@Nombre', 'VARCHAR(100)')
+      , CONVERT(DATE, nodo.value('@Fecha', 'VARCHAR(10)'), 23)
+    FROM @inXML.nodes('/Datos/Feriados/Feriado') AS x(nodo)
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.Feriado WHERE IdFeriado = nodo.value('@Id','INT')
+        SELECT 1
+        FROM dbo.Feriado AS f
+        WHERE (f.IdFeriado = nodo.value('@Id', 'INT'))
     );
-    PRINT 'Feriados cargados.';
 END;
 GO
 
-IF OBJECT_ID('sp_CargarTiposMovimiento', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposMovimiento;
-GO
-CREATE PROCEDURE sp_CargarTiposMovimiento @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarTiposEvento
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.TipoMovimiento (IdTipoMovimiento, Nombre, Accion)
+
+    INSERT INTO dbo.TipoEvento (
+        IdTipoEvento
+      , Nombre
+    )
     SELECT
-        nodo.value('@Id',     'INT'),
-        nodo.value('@Nombre', 'VARCHAR(100)'),
-        nodo.value('@Accion', 'CHAR(1)')
-    FROM @xmlData.nodes('/Catalogo/TiposDeMovimiento/TipoDeMovimiento') AS T(nodo)
+        nodo.value('@Id',     'INT')
+      , nodo.value('@Nombre', 'VARCHAR(100)')
+    FROM @inXML.nodes('/Datos/TiposEvento/TipoEvento') AS x(nodo)
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.TipoMovimiento WHERE IdTipoMovimiento = nodo.value('@Id','INT')
+        SELECT 1
+        FROM dbo.TipoEvento AS te
+        WHERE (te.IdTipoEvento = nodo.value('@Id', 'INT'))
     );
-    PRINT 'TiposDeMovimiento cargados.';
 END;
 GO
 
-IF OBJECT_ID('sp_CargarTiposDeduccion', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposDeduccion;
-GO
-CREATE PROCEDURE sp_CargarTiposDeduccion @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarTiposMovimiento
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.TipoDeduccion (IdTipoDeduccion, Nombre, EsObligatoria, EsPorcentual, Valor, IdTipoMovimiento)
+
+    INSERT INTO dbo.TipoMovimiento (
+        IdTipoMovimiento
+      , Nombre
+      , Accion
+    )
     SELECT
-        nodo.value('@Id',            'INT'),
-        nodo.value('@Nombre',        'VARCHAR(100)'),
-        nodo.value('@EsObligatoria', 'BIT'),
-        nodo.value('@EsPorcentual',  'BIT'),
-        nodo.value('@Valor',         'DECIMAL(10,4)'),
-        tm.IdTipoMovimiento
-    FROM @xmlData.nodes('/Catalogo/TiposDeDeduccion/TipoDeDeduccion') AS T(nodo)
-    INNER JOIN dbo.TipoMovimiento tm
-        ON tm.Nombre = nodo.value('@dbo.TipoMovimiento','VARCHAR(100)')
+        nodo.value('@Id',     'INT')
+      , nodo.value('@Nombre', 'VARCHAR(100)')
+      , CASE nodo.value('@Accion', 'CHAR(1)')
+            WHEN 'C' THEN '+'
+            WHEN 'D' THEN '-'
+            ELSE nodo.value('@Accion', 'CHAR(1)')
+        END
+    FROM @inXML.nodes('/Datos/TiposMovimiento/TipoMovimiento') AS x(nodo)
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.TipoDeduccion WHERE IdTipoDeduccion = nodo.value('@Id','INT')
+        SELECT 1
+        FROM dbo.TipoMovimiento AS tm
+        WHERE (tm.IdTipoMovimiento = nodo.value('@Id', 'INT'))
     );
-    PRINT 'TiposDeDeduccion cargados.';
 END;
 GO
 
-IF OBJECT_ID('sp_CargarTiposEvento', 'P') IS NOT NULL DROP PROCEDURE sp_CargarTiposEvento;
-GO
-CREATE PROCEDURE sp_CargarTiposEvento @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarTiposDeduccion
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.TipoEvento (IdTipoEvento, Nombre)
+
+    INSERT INTO dbo.TipoDeduccion (
+        IdTipoDeduccion
+      , Nombre
+      , EsObligatoria
+      , EsPorcentual
+      , Valor
+      , IdTipoMovimiento
+    )
     SELECT
-        nodo.value('@Id',     'INT'),
-        nodo.value('@Nombre', 'VARCHAR(100)')
-    FROM @xmlData.nodes('/Catalogo/TiposdeEvento/dbo.TipoEvento') AS T(nodo)
+        nodo.value('@Id',            'INT')
+      , nodo.value('@Nombre',        'VARCHAR(100)')
+      , nodo.value('@EsObligatoria', 'BIT')
+      , nodo.value('@EsPorcentual',  'BIT')
+      , nodo.value('@Valor',         'DECIMAL(10,4)')
+      , tm.IdTipoMovimiento
+    FROM @inXML.nodes('/Datos/TiposDeduccion/TipoDeduccion') AS x(nodo)
+    INNER JOIN dbo.TipoMovimiento AS tm
+        ON (tm.Nombre = nodo.value('@TipoMovimiento', 'VARCHAR(100)'))
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.TipoEvento WHERE IdTipoEvento = nodo.value('@Id','INT')
+        SELECT 1
+        FROM dbo.TipoDeduccion AS td
+        WHERE (td.IdTipoDeduccion = nodo.value('@Id', 'INT'))
     );
-    PRINT 'TiposDeEvento cargados.';
 END;
 GO
 
-IF OBJECT_ID('sp_CargarUsuariosAdmin', 'P') IS NOT NULL DROP PROCEDURE sp_CargarUsuariosAdmin;
-GO
-CREATE PROCEDURE sp_CargarUsuariosAdmin @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarUsuarios
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.Usuario (IdUsuario, Username, PasswordHash, Tipo)
+
+    INSERT INTO dbo.Usuario (
+        IdUsuario
+      , Username
+      , PasswordHash
+      , Tipo
+    )
     SELECT
-        nodo.value('@Id',       'INT'),
-        nodo.value('@Username', 'VARCHAR(50)'),
-        nodo.value('@pwd',      'VARCHAR(255)'),
-        1   
-    FROM @xmlData.nodes('/Catalogo/UsuariosAdministrador/dbo.Usuario') AS T(nodo)
+        nodo.value('@Id',           'INT')
+      , nodo.value('@Username',     'VARCHAR(50)')
+      , nodo.value('@PasswordHash', 'VARCHAR(255)')
+      , nodo.value('@Tipo',         'TINYINT')
+    FROM @inXML.nodes('/Datos/Usuarios/Usuario') AS x(nodo)
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.Usuario WHERE IdUsuario = nodo.value('@Id','INT')
+        SELECT 1
+        FROM dbo.Usuario AS u
+        WHERE (u.IdUsuario = nodo.value('@Id', 'INT'))
     );
-    PRINT 'UsuariosAdministrador cargados.';
 END;
 GO
 
-
-IF OBJECT_ID('sp_CargarCodigosError', 'P') IS NOT NULL DROP PROCEDURE sp_CargarCodigosError;
-GO
-CREATE PROCEDURE sp_CargarCodigosError @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarCodigosError
+    @inXML XML
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.CodigoError (Codigo, Descripcion)
+
+    INSERT INTO dbo.CodigoError (
+        Codigo
+      , Descripcion
+    )
     SELECT
-        nodo.value('@Codigo',      'INT'),
-        nodo.value('@Descripcion', 'VARCHAR(255)')
-    FROM @xmlData.nodes('/Catalogo/CodigosError/Error') AS T(nodo)
+        nodo.value('@Codigo',      'INT')
+      , nodo.value('@Descripcion', 'VARCHAR(255)')
+    FROM @inXML.nodes('/Datos/Error/error') AS x(nodo)
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.CodigoError WHERE Codigo = nodo.value('@Codigo','INT')
+        SELECT 1
+        FROM dbo.CodigoError AS ce
+        WHERE (ce.Codigo = nodo.value('@Codigo', 'INT'))
     );
-    PRINT 'CodigosError cargados.';
 END;
 GO
 
-IF OBJECT_ID('sp_CargarCatalogos', 'P') IS NOT NULL DROP PROCEDURE sp_CargarCatalogos;
-GO
-CREATE PROCEDURE sp_CargarCatalogos @xmlData XML
+CREATE PROCEDURE dbo.sp_CargarCatalogos
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        EXEC sp_CargarTiposJornada    @xmlData;
-        EXEC sp_CargarPuestos         @xmlData;
-        EXEC sp_CargarFeriados        @xmlData;
-        EXEC sp_CargarTiposEvento     @xmlData;
-        EXEC sp_CargarTiposMovimiento @xmlData;      
-        EXEC sp_CargarTiposDeduccion  @xmlData;      
-        EXEC sp_CargarUsuariosAdmin   @xmlData;
-        EXEC sp_CargarCodigosError    @xmlData;
+        EXEC dbo.sp_CargarTiposJornada
+            @inXML = @inXML;
+
+        EXEC dbo.sp_CargarPuestos
+            @inXML = @inXML;
+
+        EXEC dbo.sp_CargarFeriados
+            @inXML = @inXML;
+
+        EXEC dbo.sp_CargarTiposEvento
+            @inXML = @inXML;
+
+        EXEC dbo.sp_CargarTiposMovimiento
+            @inXML = @inXML;
+
+        EXEC dbo.sp_CargarTiposDeduccion
+            @inXML = @inXML;
+
+        EXEC dbo.sp_CargarUsuarios
+            @inXML = @inXML;
+
+        EXEC dbo.sp_CargarCodigosError
+            @inXML = @inXML;
 
         COMMIT TRANSACTION;
-        PRINT 'Carga de catálogos completada exitosamente.';
+
+        PRINT 'Carga de catalogos completada exitosamente.';
+
     END TRY
     BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        DECLARE @err VARCHAR(500) = ERROR_MESSAGE();
-        RAISERROR('Error en sp_CargarCatalogos: %s', 16, 1, @err);
+
+        IF (@@TRANCOUNT > 0)
+            ROLLBACK TRANSACTION;
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_CargarCatalogos'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
     END CATCH;
 END;
 GO
 
-PRINT 'SPs de catálogos creados exitosamente.';
+PRINT 'SPs de catalogos creados exitosamente.';
 GO
