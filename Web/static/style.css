@@ -193,6 +193,29 @@ button:hover,
     overflow-x: auto;
 }
 
+.section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.section-heading h2 {
+    margin-bottom: 0;
+}
+
+.amount-link {
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.amount-link:hover {
+    color: var(--primary-dark);
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -242,6 +265,11 @@ th {
     }
 
     .impersonation-bar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .section-heading {
         align-items: flex-start;
         flex-direction: column;
     }

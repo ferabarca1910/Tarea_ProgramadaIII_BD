@@ -14,13 +14,17 @@
             Semana
             <input type="number" name="id_semana" value="{{ id_semana or '' }}" min="1">
         </label>
+        <label>
+            Ultimas
+            <input type="number" name="cantidad" value="{{ cantidad }}" min="1" max="50">
+        </label>
         <button type="submit">Consultar</button>
         <a class="button secondary" href="{{ url_for('empleado.planilla_semanal') }}">Todas</a>
     </form>
 </section>
 
 <section class="table-wrap">
-    <h2>Resumen</h2>
+    <h2>Ultimas {{ cantidad }} planillas semanales</h2>
     <table>
         <thead>
             <tr>
@@ -41,8 +45,16 @@
                     <td>{{ planilla.IdSemanaPlanilla }}</td>
                     <td>{{ planilla.FechaInicio }}</td>
                     <td>{{ planilla.FechaFin }}</td>
-                    <td>{{ "%.2f"|format(planilla.SalarioBruto) }}</td>
-                    <td>{{ "%.2f"|format(planilla.TotalDeducciones) }}</td>
+                    <td>
+                        <a class="amount-link" href="{{ url_for('empleado.planilla_semanal', id_semana=id_semana, cantidad=cantidad, detalle='bruto', detalle_semana=planilla.IdSemanaPlanilla) }}">
+                            {{ "%.2f"|format(planilla.SalarioBruto) }}
+                        </a>
+                    </td>
+                    <td>
+                        <a class="amount-link" href="{{ url_for('empleado.planilla_semanal', id_semana=id_semana, cantidad=cantidad, detalle='deducciones', detalle_semana=planilla.IdSemanaPlanilla) }}">
+                            {{ "%.2f"|format(planilla.TotalDeducciones) }}
+                        </a>
+                    </td>
                     <td>{{ "%.2f"|format(planilla.SalarioNeto) }}</td>
                     <td>{{ planilla.HorasOrdinarias }}</td>
                     <td>{{ planilla.HorasExtraNormales }}</td>
@@ -57,8 +69,12 @@
     </table>
 </section>
 
+{% if detalle == 'bruto' %}
 <section class="table-wrap">
-    <h2>Horas</h2>
+    <div class="section-heading">
+        <h2>Detalle de bruto - semana {{ detalle_semana }}</h2>
+        <a class="button secondary" href="{{ url_for('empleado.planilla_semanal', id_semana=id_semana, cantidad=cantidad) }}">Cerrar detalle</a>
+    </div>
     <table>
         <thead>
             <tr>
@@ -90,9 +106,14 @@
         </tbody>
     </table>
 </section>
+{% endif %}
 
+{% if detalle == 'deducciones' %}
 <section class="table-wrap">
-    <h2>Deducciones</h2>
+    <div class="section-heading">
+        <h2>Detalle de deducciones - semana {{ detalle_semana }}</h2>
+        <a class="button secondary" href="{{ url_for('empleado.planilla_semanal', id_semana=id_semana, cantidad=cantidad) }}">Cerrar detalle</a>
+    </div>
     <table>
         <thead>
             <tr>
@@ -118,4 +139,5 @@
         </tbody>
     </table>
 </section>
+{% endif %}
 {% endblock %}

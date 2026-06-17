@@ -101,11 +101,22 @@ def consultar_deducciones_mes(id_empleado, id_mes=None):
 @login_required
 def planilla_semanal():
     id_semana = request.args.get("id_semana", type=int)
+    cantidad = request.args.get("cantidad", default=5, type=int)
+    detalle = request.args.get("detalle")
+    detalle_semana = request.args.get("detalle_semana", type=int)
     id_empleado = obtener_id_empleado_actual()
     planillas = []
     deducciones = []
     horas = []
     result_code = None
+
+    if cantidad is None or cantidad < 1:
+        cantidad = 5
+    if cantidad > 50:
+        cantidad = 50
+    if detalle not in ("bruto", "deducciones"):
+        detalle = None
+        detalle_semana = None
 
     try:
         if id_empleado is None:
@@ -117,12 +128,17 @@ def planilla_semanal():
             session["id_empleado"] = id_empleado
 
         resumen_sets, resumen_output = consultar_planilla_semanal(id_empleado, id_semana)
-        deducciones_sets, _ = consultar_deducciones_semana(id_empleado, id_semana)
-        horas_sets, _ = consultar_horas_semana(id_empleado, id_semana)
         planillas = resumen_sets[0] if resumen_sets else []
-        deducciones = deducciones_sets[0] if deducciones_sets else []
-        horas = horas_sets[0] if horas_sets else []
+        planillas = planillas[:cantidad]
         result_code = resumen_output.get("ResultCode")
+
+        if detalle == "bruto" and detalle_semana is not None:
+            horas_sets, _ = consultar_horas_semana(id_empleado, detalle_semana)
+            horas = horas_sets[0] if horas_sets else []
+
+        if detalle == "deducciones" and detalle_semana is not None:
+            deducciones_sets, _ = consultar_deducciones_semana(id_empleado, detalle_semana)
+            deducciones = deducciones_sets[0] if deducciones_sets else []
     except Exception as exc:
         flash(str(exc), "error")
 
@@ -130,6 +146,9 @@ def planilla_semanal():
         "empleado/planilla_semanal.html",
         id_empleado=id_empleado,
         id_semana=id_semana,
+        cantidad=cantidad,
+        detalle=detalle,
+        detalle_semana=detalle_semana,
         planillas=planillas,
         deducciones=deducciones,
         horas=horas,
