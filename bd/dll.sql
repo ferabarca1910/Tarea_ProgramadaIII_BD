@@ -63,11 +63,13 @@ GO
 --EsPorcentual:  1 = se aplica como porcentaje, 0 = monto fijo mensual
 CREATE TABLE dbo.TipoDeduccion (
     IdTipoDeduccion     INT           NOT NULL
+  , Nombre              VARCHAR(100)  NOT NULL
   , EsObligatoria       BIT           NOT NULL DEFAULT 0
   , EsPorcentual        BIT           NOT NULL DEFAULT 0
   , Valor               DECIMAL(10,4) NOT NULL DEFAULT 0
   , IdTipoMovimiento    INT           NOT NULL
   , CONSTRAINT PK_TipoDeduccion      PRIMARY KEY (IdTipoDeduccion)
+  , CONSTRAINT UQ_TipoDeduccion_Nombre UNIQUE (Nombre)
   , CONSTRAINT FK_TipoDeduccion_TipoMovimiento
         FOREIGN KEY (IdTipoMovimiento) REFERENCES dbo.TipoMovimiento(IdTipoMovimiento)
 );
