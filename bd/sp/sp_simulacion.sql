@@ -5,6 +5,12 @@
 USE PlanillaObrera;
 GO
 
+SET ANSI_NULLS ON;
+GO
+
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ======================================================================
 -- Función auxiliar: determina si una fecha es domingo o feriado
 -- ======================================================================
