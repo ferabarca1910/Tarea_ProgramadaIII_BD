@@ -7,7 +7,10 @@ USE master;
 GO
 
 IF EXISTS (SELECT name FROM sys.databases WHERE (name = 'PlanillaObrera'))
+BEGIN
+    ALTER DATABASE PlanillaObrera SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
     DROP DATABASE PlanillaObrera;
+END;
 GO
 
 CREATE DATABASE PlanillaObrera;

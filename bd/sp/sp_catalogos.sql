@@ -1,6 +1,12 @@
 USE PlanillaObrera;
 GO
 
+SET ANSI_NULLS ON;
+GO
+
+SET QUOTED_IDENTIFIER ON;
+GO
+
 IF OBJECT_ID('dbo.sp_CargarCatalogos', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_CargarCatalogos;
 GO
