@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Planilla Obrera{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('auth.index') }}">Planilla Obrera</a>
+        <nav class="nav">
+            {% if session.get('tipo_usuario') == 1 %}
+                <a href="{{ url_for('admin.empleados') }}">Empleados</a>
+            {% endif %}
+            {% if session.get('id_usuario') %}
+                <a href="{{ url_for('empleado.planilla_semanal') }}">Semanal</a>
+                <a href="{{ url_for('empleado.planilla_mensual') }}">Mensual</a>
+                <a href="{{ url_for('auth.logout') }}">Salir</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="alerts">
+                    {% for category, message in messages %}
+                        <p class="alert {{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
