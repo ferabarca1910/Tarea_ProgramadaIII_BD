@@ -6,6 +6,12 @@
 USE PlanillaObrera;
 GO
 
+SET ANSI_NULLS ON;
+GO
+
+SET QUOTED_IDENTIFIER ON;
+GO
+
 IF OBJECT_ID('dbo.trg_AsociarDeducciones', 'TR') IS NOT NULL
     DROP TRIGGER dbo.trg_AsociarDeducciones;
 GO
@@ -18,8 +24,6 @@ BEGIN
     SET NOCOUNT ON;
 
     BEGIN TRY
-
-
         INSERT INTO dbo.DeduccionEmpleado (
             IdEmpleado
           , IdTipoDeduccion
@@ -39,8 +43,6 @@ BEGIN
 
     END TRY
     BEGIN CATCH
-
-
         INSERT INTO dbo.DBErrors (
             NombreSP
           , Mensaje
@@ -56,7 +58,7 @@ BEGIN
           , ERROR_LINE()
         );
 
-    END CATCH
+    END CATCH;
 
 END;
 GO

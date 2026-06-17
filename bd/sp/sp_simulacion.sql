@@ -855,13 +855,6 @@ BEGIN
         NodoXML XML
     );
 
-    INSERT INTO @tFechas (Fecha, NodoXML)
-    SELECT
-        CAST(nodo.value('@Fecha', 'VARCHAR(10)') AS DATE),
-        nodo.query('.')
-    FROM @inXMLOperacion.nodes('/Operaciones/FechaOperacion') AS x(nodo)
-    ORDER BY CAST(nodo.value('@Fecha', 'VARCHAR(10)') AS DATE);
-
     DECLARE @vTotalFilas INT;
     DECLARE @vFilaActual INT = 1;
     DECLARE @vFechaActual DATE;
@@ -873,6 +866,15 @@ BEGIN
     DECLARE @vFechaFinMesSig DATE;
     DECLARE @vNumJuevesSig TINYINT;
     DECLARE @vFechaFinSemana DATE;
+
+    BEGIN TRY
+
+    INSERT INTO @tFechas (Fecha, NodoXML)
+    SELECT
+        CAST(nodo.value('@Fecha', 'VARCHAR(10)') AS DATE),
+        nodo.query('.')
+    FROM @inXMLOperacion.nodes('/Operaciones/FechaOperacion') AS x(nodo)
+    ORDER BY CAST(nodo.value('@Fecha', 'VARCHAR(10)') AS DATE);
 
     SELECT @vTotalFilas = COUNT(*) FROM @tFechas;
 
@@ -1274,6 +1276,28 @@ BEGIN
     END; -- WHILE
 
     PRINT 'Simulación completada exitosamente.';
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_EjecutarSimulacion'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
 END;
 GO
 

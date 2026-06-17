@@ -44,204 +44,308 @@ IF OBJECT_ID('dbo.sp_CargarTiposJornada', 'P') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposJornada
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.TipoJornada (
-        IdTipoJornada
-      , Nombre
-      , HoraInicio
-      , HoraFin
-    )
-    SELECT
-        nodo.value('@Id',         'INT')
-      , nodo.value('@Nombre',     'VARCHAR(50)')
-      , CAST(nodo.value('@HoraInicio', 'VARCHAR(10)') AS TIME)
-      , CAST(nodo.value('@HoraFin',    'VARCHAR(10)') AS TIME)
-    FROM @inXML.nodes('/Datos/TiposJornada/TipoJornada') AS x(nodo)
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.TipoJornada AS tj
-        WHERE (tj.IdTipoJornada = nodo.value('@Id', 'INT'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.TipoJornada (
+            IdTipoJornada
+          , Nombre
+          , HoraInicio
+          , HoraFin
+        )
+        SELECT
+            nodo.value('@Id',         'INT')
+          , nodo.value('@Nombre',     'VARCHAR(50)')
+          , CAST(nodo.value('@HoraInicio', 'VARCHAR(10)') AS TIME)
+          , CAST(nodo.value('@HoraFin',    'VARCHAR(10)') AS TIME)
+        FROM @inXML.nodes('/Datos/TiposJornada/TipoJornada') AS x(nodo)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.TipoJornada AS tj
+            WHERE (tj.IdTipoJornada = nodo.value('@Id', 'INT'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarTiposJornada', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarPuestos
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.Puesto (
-        Nombre
-      , SalarioXHora
-    )
-    SELECT
-        nodo.value('@Nombre',       'VARCHAR(100)')
-      , nodo.value('@SalarioXHora', 'DECIMAL(10,2)')
-    FROM @inXML.nodes('/Datos/Puestos/Puesto') AS x(nodo)
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.Puesto AS p
-        WHERE (p.Nombre = nodo.value('@Nombre', 'VARCHAR(100)'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.Puesto (
+            Nombre
+          , SalarioXHora
+        )
+        SELECT
+            nodo.value('@Nombre',       'VARCHAR(100)')
+          , nodo.value('@SalarioXHora', 'DECIMAL(10,2)')
+        FROM @inXML.nodes('/Datos/Puestos/Puesto') AS x(nodo)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.Puesto AS p
+            WHERE (p.Nombre = nodo.value('@Nombre', 'VARCHAR(100)'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarPuestos', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarFeriados
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.Feriado (
-        IdFeriado
-      , Nombre
-      , Fecha
-    )
-    SELECT
-        nodo.value('@Id',     'INT')
-      , nodo.value('@Nombre', 'VARCHAR(100)')
-      , CONVERT(DATE, nodo.value('@Fecha', 'VARCHAR(10)'), 23)
-    FROM @inXML.nodes('/Datos/Feriados/Feriado') AS x(nodo)
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.Feriado AS f
-        WHERE (f.IdFeriado = nodo.value('@Id', 'INT'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.Feriado (
+            IdFeriado
+          , Nombre
+          , Fecha
+        )
+        SELECT
+            nodo.value('@Id',     'INT')
+          , nodo.value('@Nombre', 'VARCHAR(100)')
+          , CONVERT(DATE, nodo.value('@Fecha', 'VARCHAR(10)'), 23)
+        FROM @inXML.nodes('/Datos/Feriados/Feriado') AS x(nodo)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.Feriado AS f
+            WHERE (f.IdFeriado = nodo.value('@Id', 'INT'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarFeriados', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposEvento
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.TipoEvento (
-        IdTipoEvento
-      , Nombre
-    )
-    SELECT
-        nodo.value('@Id',     'INT')
-      , nodo.value('@Nombre', 'VARCHAR(100)')
-    FROM @inXML.nodes('/Datos/TiposEvento/TipoEvento') AS x(nodo)
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.TipoEvento AS te
-        WHERE (te.IdTipoEvento = nodo.value('@Id', 'INT'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.TipoEvento (
+            IdTipoEvento
+          , Nombre
+        )
+        SELECT
+            nodo.value('@Id',     'INT')
+          , nodo.value('@Nombre', 'VARCHAR(100)')
+        FROM @inXML.nodes('/Datos/TiposEvento/TipoEvento') AS x(nodo)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.TipoEvento AS te
+            WHERE (te.IdTipoEvento = nodo.value('@Id', 'INT'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarTiposEvento', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposMovimiento
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.TipoMovimiento (
-        IdTipoMovimiento
-      , Nombre
-      , Accion
-    )
-    SELECT
-        nodo.value('@Id',     'INT')
-      , nodo.value('@Nombre', 'VARCHAR(100)')
-      , CASE nodo.value('@Accion', 'CHAR(1)')
-            WHEN 'C' THEN '+'
-            WHEN 'D' THEN '-'
-            ELSE nodo.value('@Accion', 'CHAR(1)')
-        END
-    FROM @inXML.nodes('/Datos/TiposMovimiento/TipoMovimiento') AS x(nodo)
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.TipoMovimiento AS tm
-        WHERE (tm.IdTipoMovimiento = nodo.value('@Id', 'INT'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.TipoMovimiento (
+            IdTipoMovimiento
+          , Nombre
+          , Accion
+        )
+        SELECT
+            nodo.value('@Id',     'INT')
+          , nodo.value('@Nombre', 'VARCHAR(100)')
+          , CASE nodo.value('@Accion', 'CHAR(1)')
+                WHEN 'C' THEN '+'
+                WHEN 'D' THEN '-'
+                ELSE nodo.value('@Accion', 'CHAR(1)')
+            END
+        FROM @inXML.nodes('/Datos/TiposMovimiento/TipoMovimiento') AS x(nodo)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.TipoMovimiento AS tm
+            WHERE (tm.IdTipoMovimiento = nodo.value('@Id', 'INT'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarTiposMovimiento', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarTiposDeduccion
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.TipoDeduccion (
-        IdTipoDeduccion
-      , Nombre
-      , EsObligatoria
-      , EsPorcentual
-      , Valor
-      , IdTipoMovimiento
-    )
-    SELECT
-        nodo.value('@Id',            'INT')
-      , nodo.value('@Nombre',        'VARCHAR(100)')
-      , nodo.value('@EsObligatoria', 'BIT')
-      , nodo.value('@EsPorcentual',  'BIT')
-      , nodo.value('@Valor',         'DECIMAL(10,4)')
-      , tm.IdTipoMovimiento
-    FROM @inXML.nodes('/Datos/TiposDeduccion/TipoDeduccion') AS x(nodo)
-    INNER JOIN dbo.TipoMovimiento AS tm
-        ON (tm.Nombre = nodo.value('@TipoMovimiento', 'VARCHAR(100)'))
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.TipoDeduccion AS td
-        WHERE (td.IdTipoDeduccion = nodo.value('@Id', 'INT'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.TipoDeduccion (
+            IdTipoDeduccion
+          , Nombre
+          , EsObligatoria
+          , EsPorcentual
+          , Valor
+          , IdTipoMovimiento
+        )
+        SELECT
+            nodo.value('@Id',            'INT')
+          , nodo.value('@Nombre',        'VARCHAR(100)')
+          , nodo.value('@EsObligatoria', 'BIT')
+          , nodo.value('@EsPorcentual',  'BIT')
+          , nodo.value('@Valor',         'DECIMAL(10,4)')
+          , tm.IdTipoMovimiento
+        FROM @inXML.nodes('/Datos/TiposDeduccion/TipoDeduccion') AS x(nodo)
+        INNER JOIN dbo.TipoMovimiento AS tm
+            ON (tm.Nombre = nodo.value('@TipoMovimiento', 'VARCHAR(100)'))
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.TipoDeduccion AS td
+            WHERE (td.IdTipoDeduccion = nodo.value('@Id', 'INT'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarTiposDeduccion', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarUsuarios
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.Usuario (
-        IdUsuario
-      , Username
-      , PasswordHash
-      , Tipo
-    )
-    SELECT
-        nodo.value('@Id',           'INT')
-      , nodo.value('@Username',     'VARCHAR(50)')
-      , nodo.value('@PasswordHash', 'VARCHAR(255)')
-      , nodo.value('@Tipo',         'TINYINT')
-    FROM @inXML.nodes('/Datos/Usuarios/Usuario') AS x(nodo)
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.Usuario AS u
-        WHERE (u.IdUsuario = nodo.value('@Id', 'INT'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.Usuario (
+            IdUsuario
+          , Username
+          , PasswordHash
+          , Tipo
+        )
+        SELECT
+            nodo.value('@Id',           'INT')
+          , nodo.value('@Username',     'VARCHAR(50)')
+          , nodo.value('@PasswordHash', 'VARCHAR(255)')
+          , nodo.value('@Tipo',         'TINYINT')
+        FROM @inXML.nodes('/Datos/Usuarios/Usuario') AS x(nodo)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.Usuario AS u
+            WHERE (u.IdUsuario = nodo.value('@Id', 'INT'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarUsuarios', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
 CREATE PROCEDURE dbo.sp_CargarCodigosError
-    @inXML XML
+    @inXML          XML
+  , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.CodigoError (
-        Codigo
-      , Descripcion
-    )
-    SELECT
-        nodo.value('@Codigo',      'INT')
-      , nodo.value('@Descripcion', 'VARCHAR(255)')
-    FROM @inXML.nodes('/Datos/Error/error') AS x(nodo)
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM dbo.CodigoError AS ce
-        WHERE (ce.Codigo = nodo.value('@Codigo', 'INT'))
-    );
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        INSERT INTO dbo.CodigoError (
+            Codigo
+          , Descripcion
+        )
+        SELECT
+            nodo.value('@Codigo',      'INT')
+          , nodo.value('@Descripcion', 'VARCHAR(255)')
+        FROM @inXML.nodes('/Datos/Error/error') AS x(nodo)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dbo.CodigoError AS ce
+            WHERE (ce.Codigo = nodo.value('@Codigo', 'INT'))
+        );
+    END TRY
+    BEGIN CATCH
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CargarCodigosError', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+
+        THROW;
+    END CATCH;
 END;
 GO
 
@@ -255,31 +359,41 @@ BEGIN
     SET @outResultCode = 0;
 
     BEGIN TRY
+        DECLARE @vResultCode INT;
+
         BEGIN TRANSACTION;
 
         EXEC dbo.sp_CargarTiposJornada
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarPuestos
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarFeriados
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarTiposEvento
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarTiposMovimiento
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarTiposDeduccion
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarUsuarios
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         EXEC dbo.sp_CargarCodigosError
-            @inXML = @inXML;
+            @inXML = @inXML
+          , @outResultCode = @vResultCode OUTPUT;
 
         COMMIT TRANSACTION;
 
