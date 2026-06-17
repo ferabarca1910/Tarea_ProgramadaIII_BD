@@ -56,17 +56,18 @@ RETURNS TINYINT
 AS
 BEGIN
     DECLARE @vCantidad TINYINT = 0;
-    ;WITH Fechas AS (
-        SELECT @inFechaInicio AS Fecha
-        UNION ALL
-        SELECT DATEADD(DAY, 1, Fecha)
-        FROM Fechas
-        WHERE (Fecha < @inFechaFin)
-    )
-    SELECT @vCantidad = COUNT(*)
-    FROM Fechas
-    WHERE (DATEPART(WEEKDAY, Fecha) = 5)
-    OPTION (MAXRECURSION 60);
+    DECLARE @vFecha    DATE = @inFechaInicio;
+
+    WHILE (@vFecha <= @inFechaFin)
+    BEGIN
+
+        IF (DATEPART(WEEKDAY, @vFecha) = 5)
+            SET @vCantidad = @vCantidad + 1;
+
+        SET @vFecha = DATEADD(DAY, 1, @vFecha);
+
+    END;
+
     RETURN @vCantidad;
 END;
 GO
@@ -384,12 +385,18 @@ BEGIN
             + N'","entrada":"' + CONVERT(VARCHAR, @inFechaHoraEntrada, 120)
             + N'","salida":"'  + CONVERT(VARCHAR, @inFechaHoraSalida, 120) + N'"}';
 
-        EXEC sp_RegistrarEvento
-            @inIdUsuario    = @inIdUsuarioSistema,
-            @inIdTipoEvento = 14,
-            @inIPOrigen     = @inIPOrigen,
-            @inParametros   = @vParams,
-            @outResultCode  = @outResultCode OUTPUT;
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario,
+            IdTipoEvento,
+            IPOrigen,
+            Parametros
+        )
+        VALUES (
+            @inIdUsuarioSistema,
+            14,
+            @inIPOrigen,
+            @vParams
+        );
 
         COMMIT TRANSACTION;
     END TRY
@@ -423,6 +430,8 @@ BEGIN
     DECLARE @vIdSemanaPlanilla INT;
     DECLARE @vIdMesPlanilla    INT;
     DECLARE @vCantidadJueves   TINYINT;
+    DECLARE @vParametros       NVARCHAR(MAX);
+    DECLARE @vMensaje          NVARCHAR(100);
 
     SELECT
         @vIdSemanaPlanilla = sp.IdSemanaPlanilla,
@@ -579,7 +588,7 @@ BEGIN
             ON (dest.IdPlanillaMesXEmpleado = src.IdPlanillaMesXEmpleado)
            AND (dest.IdTipoDeduccion = src.IdTipoDeduccion)
         WHEN MATCHED THEN
-            UPDATE SET MontoTotal = dest.MontoTotal + src.Monto
+            UPDATE SET MontoTotal = ISNULL(MontoTotal, 0) + src.Monto
         WHEN NOT MATCHED THEN
             INSERT (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
             VALUES (src.IdPlanillaMesXEmpleado, src.IdTipoDeduccion, src.Monto);
@@ -597,7 +606,7 @@ BEGIN
             ON (dest.IdPlanillaMesXEmpleado = src.IdPlanillaMesXEmpleado)
            AND (dest.IdTipoDeduccion = src.IdTipoDeduccion)
         WHEN MATCHED THEN
-            UPDATE SET MontoTotal = dest.MontoTotal + src.Monto
+            UPDATE SET MontoTotal = ISNULL(MontoTotal, 0) + src.Monto
         WHEN NOT MATCHED THEN
             INSERT (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
             VALUES (src.IdPlanillaMesXEmpleado, src.IdTipoDeduccion, src.Monto);
@@ -605,9 +614,9 @@ BEGIN
         -- Acumular en planilla mensual
         UPDATE pme
         SET
-            pme.SalarioBrutoMensual     = pme.SalarioBrutoMensual     + pse.SalarioBruto,
-            pme.TotalDeduccionesMensual = pme.TotalDeduccionesMensual + pse.TotalDeducciones,
-            pme.SalarioNetoMensual      = pme.SalarioNetoMensual      + pse.SalarioNeto
+            SalarioBrutoMensual     = ISNULL(pme.SalarioBrutoMensual, 0)     + ISNULL(pse.SalarioBruto, 0),
+            TotalDeduccionesMensual = ISNULL(pme.TotalDeduccionesMensual, 0) + ISNULL(pse.TotalDeducciones, 0),
+            SalarioNetoMensual      = ISNULL(pme.SalarioNetoMensual, 0)      + ISNULL(pse.SalarioNeto, 0)
         FROM dbo.PlanillaMesXEmpleado AS pme
         INNER JOIN dbo.PlanillaSemXEmpleado AS pse
             ON (pse.IdEmpleado = pme.IdEmpleado)
@@ -619,17 +628,32 @@ BEGIN
         SET Cerrada = 1
         WHERE (IdSemanaPlanilla = @vIdSemanaPlanilla);
 
-        -- Registrar evento (corregido con variable)
-        DECLARE @msgCierre NVARCHAR(100) =
-            'Cierre semanal del ' + CONVERT(VARCHAR, @inFechaJueves, 103) + ' completado.';
-        PRINT @msgCierre;
+        SET @vParametros = CONCAT(
+            N'{"cierre_semanal":"',
+            CONVERT(VARCHAR, @inFechaJueves, 120),
+            N'"}'
+        );
 
-        EXEC sp_RegistrarEvento
-            @inIdUsuario    = @inIdUsuarioSistema,
-            @inIdTipoEvento = 14,
-            @inIPOrigen     = @inIPOrigen,
-            @inParametros   = N'{"cierre_semanal":"' + CONVERT(VARCHAR, @inFechaJueves, 120) + N'"}',
-            @outResultCode  = @outResultCode OUTPUT;
+        SET @vMensaje = CONCAT(
+            N'Cierre semanal del ',
+            CONVERT(VARCHAR, @inFechaJueves, 103),
+            N' completado.'
+        );
+
+        PRINT @vMensaje;
+
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario,
+            IdTipoEvento,
+            IPOrigen,
+            Parametros
+        )
+        VALUES (
+            @inIdUsuarioSistema,
+            14,
+            @inIPOrigen,
+            @vParametros
+        );
 
         COMMIT TRANSACTION;
     END TRY
@@ -834,6 +858,7 @@ BEGIN
     DECLARE @vEsUltimoJue   BIT;
     DECLARE @vFechaFinMesSig DATE;
     DECLARE @vNumJuevesSig   TINYINT;
+    DECLARE @vFechaFinSemana DATE;
 
     SELECT @vTotalFilas = COUNT(*) FROM @tFechas;
 
@@ -1193,9 +1218,11 @@ BEGIN
             END;
 
             -- Apertura de siguiente semana
+            SET @vFechaFinSemana = DATEADD(DAY, 6, @vFechaViernes);
+
             EXEC dbo.sp_AperturaSemana
                 @inFechaInicioSemana = @vFechaViernes,
-                @inFechaFinSemana    = DATEADD(DAY, 6, @vFechaViernes),
+                @inFechaFinSemana    = @vFechaFinSemana,
                 @outResultCode       = @vResultCode OUTPUT;
         END;
 
