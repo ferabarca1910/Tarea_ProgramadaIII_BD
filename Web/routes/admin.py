@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from routes.auth import admin_required, execute_with_result_sets
+from routes.auth import admin_required, execute_with_result_sets, log_event
 
 
 admin_bp = Blueprint("admin", __name__)
@@ -49,6 +49,16 @@ def empleados():
 
     try:
         empleados_data, result_code = listar_empleados(nombre, documento)
+        log_event(
+            12 if documento else 11,
+            {
+                "accion": "listar_empleados",
+                "nombre": nombre,
+                "documento": documento,
+                "resultCode": result_code,
+                "cantidadResultados": len(empleados_data),
+            },
+        )
     except Exception as exc:
         flash(str(exc), "error")
 
@@ -76,6 +86,15 @@ def impersonar_empleado(id_empleado):
 
     session["id_empleado_impersonado"] = empleado["IdEmpleado"]
     session["nombre_empleado_impersonado"] = empleado["Nombre"]
+    log_event(
+        11,
+        {
+            "accion": "impersonar_empleado",
+            "idEmpleado": empleado["IdEmpleado"],
+            "nombreEmpleado": empleado["Nombre"],
+            "valorDocumento": empleado["ValorDocumentoIdentidad"],
+        },
+    )
     flash(f"Impersonando a {empleado['Nombre']}.", "info")
     return redirect(url_for("empleado.planilla_semanal"))
 
@@ -83,6 +102,14 @@ def impersonar_empleado(id_empleado):
 @admin_bp.route("/regresar-impersonacion")
 @admin_required
 def regresar_impersonacion():
+    log_event(
+        11,
+        {
+            "accion": "regresar_a_admin",
+            "idEmpleado": session.get("id_empleado_impersonado"),
+            "nombreEmpleado": session.get("nombre_empleado_impersonado"),
+        },
+    )
     session.pop("id_empleado_impersonado", None)
     session.pop("nombre_empleado_impersonado", None)
     flash("Regresaste al modo administrador.", "info")

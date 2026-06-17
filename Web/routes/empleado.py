@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from routes.auth import execute_with_result_sets, login_required
+from routes.auth import execute_with_result_sets, log_event, login_required
 
 
 empleado_bp = Blueprint("empleado", __name__)
@@ -131,6 +131,18 @@ def planilla_semanal():
         planillas = resumen_sets[0] if resumen_sets else []
         planillas = planillas[:cantidad]
         result_code = resumen_output.get("ResultCode")
+        log_event(
+            11,
+            {
+                "accion": "consultar_planilla_semanal",
+                "idEmpleado": id_empleado,
+                "idSemana": id_semana,
+                "cantidad": cantidad,
+                "detalle": detalle,
+                "detalleSemana": detalle_semana,
+                "resultCode": result_code,
+            },
+        )
 
         if detalle == "bruto" and detalle_semana is not None:
             horas_sets, _ = consultar_horas_semana(id_empleado, detalle_semana)
@@ -189,6 +201,18 @@ def planilla_mensual():
         planillas = resumen_sets[0] if resumen_sets else []
         planillas = planillas[:cantidad]
         result_code = resumen_output.get("ResultCode")
+        log_event(
+            11,
+            {
+                "accion": "consultar_planilla_mensual",
+                "idEmpleado": id_empleado,
+                "idMes": id_mes,
+                "cantidad": cantidad,
+                "detalle": detalle,
+                "detalleMes": detalle_mes,
+                "resultCode": result_code,
+            },
+        )
 
         if detalle == "deducciones" and detalle_mes is not None:
             deducciones_sets, _ = consultar_deducciones_mes(id_empleado, detalle_mes)

@@ -1,3 +1,4 @@
+import json
 from functools import wraps
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
@@ -39,6 +40,41 @@ def execute_with_result_sets(sql, params=None):
                 break
 
     return result_sets, output
+
+
+def log_event(id_tipo_evento, parametros=None, datos_antes=None, datos_despues=None, id_usuario=None):
+    usuario = id_usuario or session.get("id_usuario")
+
+    if usuario is None:
+        return
+
+    sql = """
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario
+          , IdTipoEvento
+          , IPOrigen
+          , Parametros
+          , DatosAntes
+          , DatosDespues
+        )
+        VALUES (?, ?, ?, ?, ?, ?);
+    """
+    values = [
+        usuario,
+        id_tipo_evento,
+        request.remote_addr or "127.0.0.1",
+        json.dumps(parametros, default=str) if parametros is not None else None,
+        json.dumps(datos_antes, default=str) if datos_antes is not None else None,
+        json.dumps(datos_despues, default=str) if datos_despues is not None else None,
+    ]
+
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, values)
+            conn.commit()
+    except Exception:
+        current_app.logger.exception("No se pudo registrar evento en bitacora")
 
 
 def call_login(username, password):
@@ -148,5 +184,14 @@ def login():
 
 @auth_bp.route("/logout")
 def logout():
+    log_event(
+        4,
+        {
+            "accion": "logout",
+            "username": session.get("username"),
+            "tipoUsuario": session.get("tipo_usuario"),
+            "idEmpleadoImpersonado": session.get("id_empleado_impersonado"),
+        },
+    )
     session.clear()
     return redirect(url_for("auth.login"))
