@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Empleados - Planilla Obrera{% endblock %}
+
+{% block content %}
+<section class="toolbar">
+    <div>
+        <h1>Empleados</h1>
+        <p>ResultCode: {{ result_code }}</p>
+    </div>
+
+    <form method="get" class="filters">
+        <label>
+            Nombre
+            <input type="text" name="nombre" value="{{ nombre }}">
+        </label>
+        <label>
+            Documento
+            <input type="text" name="documento" value="{{ documento }}">
+        </label>
+        <button type="submit">Filtrar</button>
+        <a class="button secondary" href="{{ url_for('admin.empleados') }}">Limpiar</a>
+    </form>
+</section>
+
+<section class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Documento</th>
+                <th>Puesto</th>
+                <th>Salario hora</th>
+                <th>Usuario</th>
+                <th>Activo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for empleado in empleados %}
+                <tr>
+                    <td>{{ empleado.IdEmpleado }}</td>
+                    <td>{{ empleado.Nombre }}</td>
+                    <td>{{ empleado.ValorDocumentoIdentidad }}</td>
+                    <td>{{ empleado.NombrePuesto }}</td>
+                    <td>{{ "%.2f"|format(empleado.SalarioXHora) }}</td>
+                    <td>{{ empleado.Username }}</td>
+                    <td>{{ "Si" if empleado.Activo else "No" }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7" class="empty">No hay empleados para mostrar.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
