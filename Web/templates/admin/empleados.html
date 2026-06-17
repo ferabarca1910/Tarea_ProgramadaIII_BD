@@ -20,6 +20,7 @@
         </label>
         <button type="submit">Filtrar</button>
         <a class="button secondary" href="{{ url_for('admin.empleados') }}">Limpiar</a>
+        <a class="button" href="{{ url_for('admin.nuevo_empleado') }}">Nuevo</a>
     </form>
 </section>
 
@@ -47,9 +48,13 @@
                     <td>{{ "%.2f"|format(empleado.SalarioXHora) }}</td>
                     <td>{{ empleado.Username }}</td>
                     <td>{{ "Si" if empleado.Activo else "No" }}</td>
-                    <td>
+                    <td class="actions-cell">
+                        <a class="button secondary compact" href="{{ url_for('admin.editar_empleado', id_empleado=empleado.IdEmpleado) }}">Editar</a>
                         <form method="post" action="{{ url_for('admin.impersonar_empleado', id_empleado=empleado.IdEmpleado) }}" class="inline-form">
                             <button type="submit">Impersonar</button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.eliminar_empleado_route', id_empleado=empleado.IdEmpleado) }}" class="inline-form" data-confirm="Eliminar empleado {{ empleado.Nombre }}?">
+                            <button type="submit" class="danger">Eliminar</button>
                         </form>
                     </td>
                 </tr>
