@@ -34,6 +34,7 @@
                 <th>Salario hora</th>
                 <th>Usuario</th>
                 <th>Activo</th>
+                <th>Accion</th>
             </tr>
         </thead>
         <tbody>
@@ -46,10 +47,15 @@
                     <td>{{ "%.2f"|format(empleado.SalarioXHora) }}</td>
                     <td>{{ empleado.Username }}</td>
                     <td>{{ "Si" if empleado.Activo else "No" }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('admin.impersonar_empleado', id_empleado=empleado.IdEmpleado) }}" class="inline-form">
+                            <button type="submit">Impersonar</button>
+                        </form>
+                    </td>
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="7" class="empty">No hay empleados para mostrar.</td>
+                    <td colspan="8" class="empty">No hay empleados para mostrar.</td>
                 </tr>
             {% endfor %}
         </tbody>

@@ -21,6 +21,13 @@
         </nav>
     </header>
 
+    {% if session.get('id_empleado_impersonado') %}
+        <section class="impersonation-bar">
+            <span>Impersonando: {{ session.get('nombre_empleado_impersonado') }}</span>
+            <a href="{{ url_for('admin.regresar_impersonacion') }}">Regresar a administrador</a>
+        </section>
+    {% endif %}
+
     <main class="page">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
