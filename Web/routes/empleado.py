@@ -160,10 +160,21 @@ def planilla_semanal():
 @login_required
 def planilla_mensual():
     id_mes = request.args.get("id_mes", type=int)
+    cantidad = request.args.get("cantidad", default=5, type=int)
+    detalle = request.args.get("detalle")
+    detalle_mes = request.args.get("detalle_mes", type=int)
     id_empleado = obtener_id_empleado_actual()
     planillas = []
     deducciones = []
     result_code = None
+
+    if cantidad is None or cantidad < 1:
+        cantidad = 5
+    if cantidad > 50:
+        cantidad = 50
+    if detalle != "deducciones":
+        detalle = None
+        detalle_mes = None
 
     try:
         if id_empleado is None:
@@ -175,10 +186,13 @@ def planilla_mensual():
             session["id_empleado"] = id_empleado
 
         resumen_sets, resumen_output = consultar_planilla_mensual(id_empleado, id_mes)
-        deducciones_sets, _ = consultar_deducciones_mes(id_empleado, id_mes)
         planillas = resumen_sets[0] if resumen_sets else []
-        deducciones = deducciones_sets[0] if deducciones_sets else []
+        planillas = planillas[:cantidad]
         result_code = resumen_output.get("ResultCode")
+
+        if detalle == "deducciones" and detalle_mes is not None:
+            deducciones_sets, _ = consultar_deducciones_mes(id_empleado, detalle_mes)
+            deducciones = deducciones_sets[0] if deducciones_sets else []
     except Exception as exc:
         flash(str(exc), "error")
 
@@ -186,6 +200,9 @@ def planilla_mensual():
         "empleado/planilla_mensual.html",
         id_empleado=id_empleado,
         id_mes=id_mes,
+        cantidad=cantidad,
+        detalle=detalle,
+        detalle_mes=detalle_mes,
         planillas=planillas,
         deducciones=deducciones,
         result_code=result_code,

@@ -14,13 +14,17 @@
             Mes planilla
             <input type="number" name="id_mes" value="{{ id_mes or '' }}" min="1">
         </label>
+        <label>
+            Ultimas
+            <input type="number" name="cantidad" value="{{ cantidad }}" min="1" max="50">
+        </label>
         <button type="submit">Consultar</button>
         <a class="button secondary" href="{{ url_for('empleado.planilla_mensual') }}">Todos</a>
     </form>
 </section>
 
 <section class="table-wrap">
-    <h2>Resumen</h2>
+    <h2>Ultimas {{ cantidad }} planillas mensuales</h2>
     <table>
         <thead>
             <tr>
@@ -41,7 +45,11 @@
                     <td>{{ planilla.FechaFin }}</td>
                     <td>{{ planilla.CantidadJueves }}</td>
                     <td>{{ "%.2f"|format(planilla.SalarioBrutoMensual) }}</td>
-                    <td>{{ "%.2f"|format(planilla.TotalDeduccionesMensual) }}</td>
+                    <td>
+                        <a class="amount-link" href="{{ url_for('empleado.planilla_mensual', id_mes=id_mes, cantidad=cantidad, detalle='deducciones', detalle_mes=planilla.IdMesPlanilla) }}">
+                            {{ "%.2f"|format(planilla.TotalDeduccionesMensual) }}
+                        </a>
+                    </td>
                     <td>{{ "%.2f"|format(planilla.SalarioNetoMensual) }}</td>
                 </tr>
             {% else %}
@@ -53,8 +61,12 @@
     </table>
 </section>
 
+{% if detalle == 'deducciones' %}
 <section class="table-wrap">
-    <h2>Deducciones</h2>
+    <div class="section-heading">
+        <h2>Detalle de deducciones - mes {{ detalle_mes }}</h2>
+        <a class="button secondary" href="{{ url_for('empleado.planilla_mensual', id_mes=id_mes, cantidad=cantidad) }}">Cerrar detalle</a>
+    </div>
     <table>
         <thead>
             <tr>
@@ -80,4 +92,5 @@
         </tbody>
     </table>
 </section>
+{% endif %}
 {% endblock %}
