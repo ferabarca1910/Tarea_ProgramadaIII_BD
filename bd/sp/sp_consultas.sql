@@ -35,6 +35,22 @@ IF OBJECT_ID('dbo.sp_WebRegistrarEventoBitacora', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_WebRegistrarEventoBitacora;
 GO
 
+IF OBJECT_ID('dbo.sp_WebEliminarEmpleado', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebEliminarEmpleado;
+GO
+
+IF OBJECT_ID('dbo.sp_WebActualizarEmpleado', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebActualizarEmpleado;
+GO
+
+IF OBJECT_ID('dbo.sp_WebInsertarEmpleado', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebInsertarEmpleado;
+GO
+
+IF OBJECT_ID('dbo.sp_WebListarPuestos', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_WebListarPuestos;
+GO
+
 IF OBJECT_ID('dbo.sp_WebObtenerEmpleadoPorUsuario', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_WebObtenerEmpleadoPorUsuario;
 GO
@@ -1046,6 +1062,141 @@ BEGIN
         SELECT @outResultCode AS ResultCode;
 
     END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebListarPuestos
+    @outResultCode INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            p.IdPuesto
+          , p.Nombre
+          , p.SalarioXHora
+        FROM dbo.Puesto AS p
+        ORDER BY
+            p.Nombre;
+
+        SELECT @outResultCode AS ResultCode;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_WebListarPuestos'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+        SELECT @outResultCode AS ResultCode;
+
+    END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebInsertarEmpleado
+    @inNombre           VARCHAR(150)
+  , @inValorDocumento   VARCHAR(30)
+  , @inNombrePuesto     VARCHAR(100)
+  , @inUsername         VARCHAR(50)
+  , @inPassword         VARCHAR(255)
+  , @inCuentaBancaria   VARCHAR(30)
+  , @inFechaIngreso     DATE
+  , @inIdUsuarioAdmin   INT
+  , @inIPOrigen         VARCHAR(45) = '127.0.0.1'
+  , @outResultCode      INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @vIdEmpleadoNuevo INT;
+
+    EXEC dbo.sp_InsertarEmpleado
+        @inNombre = @inNombre
+      , @inValorDocumento = @inValorDocumento
+      , @inNombrePuesto = @inNombrePuesto
+      , @inUsername = @inUsername
+      , @inPassword = @inPassword
+      , @inCuentaBancaria = @inCuentaBancaria
+      , @inFechaIngreso = @inFechaIngreso
+      , @inIdUsuarioAdmin = @inIdUsuarioAdmin
+      , @inIPOrigen = @inIPOrigen
+      , @outIdEmpleadoNuevo = @vIdEmpleadoNuevo OUTPUT
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT
+        @outResultCode AS ResultCode
+      , @vIdEmpleadoNuevo AS IdEmpleadoNuevo;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebActualizarEmpleado
+    @inIdEmpleado        INT
+  , @inNombre            VARCHAR(150)
+  , @inValorDocumento    VARCHAR(30)
+  , @inNombrePuesto      VARCHAR(100)
+  , @inUsername          VARCHAR(50)
+  , @inPassword          VARCHAR(255) = NULL
+  , @inCuentaBancaria    VARCHAR(30) = NULL
+  , @inFechaIngreso      DATE
+  , @inActivo            BIT = 1
+  , @inIdUsuarioAdmin    INT
+  , @inIPOrigen          VARCHAR(45) = '127.0.0.1'
+  , @outResultCode       INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_ActualizarEmpleado
+        @inIdEmpleado = @inIdEmpleado
+      , @inNombre = @inNombre
+      , @inValorDocumento = @inValorDocumento
+      , @inNombrePuesto = @inNombrePuesto
+      , @inUsername = @inUsername
+      , @inPassword = @inPassword
+      , @inCuentaBancaria = @inCuentaBancaria
+      , @inFechaIngreso = @inFechaIngreso
+      , @inActivo = @inActivo
+      , @inIdUsuarioAdmin = @inIdUsuarioAdmin
+      , @inIPOrigen = @inIPOrigen
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_WebEliminarEmpleado
+    @inValorDocumento  VARCHAR(30)
+  , @inIdUsuarioAdmin  INT
+  , @inIPOrigen        VARCHAR(45) = '127.0.0.1'
+  , @outResultCode     INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_EliminarEmpleado
+        @inValorDocumento = @inValorDocumento
+      , @inIdUsuarioAdmin = @inIdUsuarioAdmin
+      , @inIPOrigen = @inIPOrigen
+      , @outResultCode = @outResultCode OUTPUT;
+
+    SELECT @outResultCode AS ResultCode;
 END;
 GO
 
