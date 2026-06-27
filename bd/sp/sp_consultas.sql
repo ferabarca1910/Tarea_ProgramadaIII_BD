@@ -950,3 +950,39 @@ BEGIN
 END;
 GO
 
+CREATE PROCEDURE dbo.sp_WebInsertarEmpleado
+    @inNombre VARCHAR(150)
+  ,@inValorDocumento VARCHAR(30)
+  ,@inNombrePuesto VARCHAR(100)
+  ,@inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255)
+  ,@inCuentaBancaria VARCHAR(30)
+  ,@inFechaIngreso DATE
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT = 0 OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @vIdEmpleadoNuevo INT;
+
+    EXEC dbo.sp_InsertarEmpleado
+        @inNombre = @inNombre
+      ,@inValorDocumento = @inValorDocumento
+      ,@inNombrePuesto = @inNombrePuesto
+      ,@inUsername = @inUsername
+      ,@inPassword = @inPassword
+      ,@inCuentaBancaria = @inCuentaBancaria
+      ,@inFechaIngreso = @inFechaIngreso
+      ,@inIdUsuarioAdmin = @inIdUsuarioAdmin
+      ,@inIPOrigen = @inIPOrigen
+      ,@outIdEmpleadoNuevo = @vIdEmpleadoNuevo OUTPUT
+      ,@outResultCode = @outResultCode OUTPUT;
+
+    SELECT
+        @outResultCode AS ResultCode
+      ,@vIdEmpleadoNuevo AS IdEmpleadoNuevo;
+END;
+GO
+
