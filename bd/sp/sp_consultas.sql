@@ -371,3 +371,59 @@ BEGIN
     END CATCH;
 END;
 GO
+
+CREATE PROCEDURE dbo.sp_ObtenerEmpleado
+    @inIdEmpleado INT = NULL
+  ,@inValorDocumento VARCHAR(30) = NULL
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            e.IdEmpleado
+          , e.Nombre
+          , e.ValorDocumentoIdentidad
+          , e.CuentaBancaria
+          , e.FechaIngreso
+          , e.Activo
+          , p.IdPuesto
+          , p.Nombre AS NombrePuesto
+          , p.SalarioXHora
+          , u.IdUsuario
+          , u.Username
+          , u.Tipo AS TipoUsuario
+        FROM dbo.Empleado AS e
+        INNER JOIN dbo.Puesto AS p
+            ON (p.IdPuesto = e.IdPuesto)
+        INNER JOIN dbo.Usuario AS u
+            ON (u.IdUsuario = e.IdUsuario)
+        WHERE (@inIdEmpleado IS NOT NULL AND e.IdEmpleado = @inIdEmpleado)
+           OR (@inValorDocumento IS NOT NULL AND e.ValorDocumentoIdentidad = @inValorDocumento);
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ObtenerEmpleado'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
