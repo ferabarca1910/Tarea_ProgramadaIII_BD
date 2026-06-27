@@ -215,3 +215,159 @@ BEGIN
     END CATCH;
 END;
 GO
+
+CREATE PROCEDURE dbo.sp_ListarEmpleados
+    @inSoloActivos BIT = 1
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            e.IdEmpleado
+          , e.Nombre
+          , e.ValorDocumentoIdentidad
+          , e.CuentaBancaria
+          , e.FechaIngreso
+          , e.Activo
+          , p.IdPuesto
+          , p.Nombre AS NombrePuesto
+          , p.SalarioXHora
+          , u.IdUsuario
+          , u.Username
+          , u.Tipo AS TipoUsuario
+        FROM dbo.Empleado AS e
+        INNER JOIN dbo.Puesto AS p
+            ON (p.IdPuesto = e.IdPuesto)
+        INNER JOIN dbo.Usuario AS u
+            ON (u.IdUsuario = e.IdUsuario)
+        WHERE (@inSoloActivos = 0 OR e.Activo = 1)
+        ORDER BY
+            e.Nombre;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ListarEmpleados'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_ListarEmpleadosConFiltro
+    @inNombre VARCHAR(150) = NULL
+  ,@inValorDocumento VARCHAR(30) = NULL
+  ,@inSoloActivos BIT = 1
+  ,@inIdUsuarioConsulta INT = NULL
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            e.IdEmpleado
+          , e.Nombre
+          , e.ValorDocumentoIdentidad
+          , e.CuentaBancaria
+          , e.FechaIngreso
+          , e.Activo
+          , p.IdPuesto
+          , p.Nombre AS NombrePuesto
+          , p.SalarioXHora
+          , u.IdUsuario
+          , u.Username
+          , u.Tipo AS TipoUsuario
+        FROM dbo.Empleado AS e
+        INNER JOIN dbo.Puesto AS p
+            ON (p.IdPuesto = e.IdPuesto)
+        INNER JOIN dbo.Usuario AS u
+            ON (u.IdUsuario = e.IdUsuario)
+        WHERE (@inSoloActivos = 0 OR e.Activo = 1)
+          AND (@inNombre IS NULL OR e.Nombre LIKE '%' + @inNombre + '%')
+          AND (
+                @inValorDocumento IS NULL
+                OR e.ValorDocumentoIdentidad LIKE '%' + @inValorDocumento + '%'
+              )
+        ORDER BY
+            e.Nombre;
+
+        IF (@inIdUsuarioConsulta IS NOT NULL)
+        BEGIN
+            IF (@inNombre IS NOT NULL)
+            BEGIN
+                INSERT INTO dbo.BitacoraEvento (
+                    IdUsuario
+                  , IdTipoEvento
+                  , IPOrigen
+                  , Parametros
+                )
+                VALUES (
+                    @inIdUsuarioConsulta
+                  , 11
+                  ,@inIPOrigen
+                  , CONCAT(N'{"nombre":"', @inNombre, N'"}')
+                );
+            END;
+
+            IF (@inValorDocumento IS NOT NULL)
+            BEGIN
+                INSERT INTO dbo.BitacoraEvento (
+                    IdUsuario
+                  , IdTipoEvento
+                  , IPOrigen
+                  , Parametros
+                )
+                VALUES (
+                    @inIdUsuarioConsulta
+                  , 12
+                  ,@inIPOrigen
+                  , CONCAT(N'{"valorDocumento":"', @inValorDocumento, N'"}')
+                );
+            END;
+        END;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ListarEmpleadosConFiltro'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
