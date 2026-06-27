@@ -480,3 +480,67 @@ BEGIN
         SET @outResultCode = 0;
         RETURN;
     END;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        UPDATE dbo.DeduccionEmpleado
+        SET FechaFin = @inFechaFin
+        WHERE (IdEmpleado = @vIdEmpleado)
+          AND (IdTipoDeduccion = @inIdTipoDeduccion)
+          AND (FechaFin IS NULL);
+
+        SET @vParametros = CONCAT(
+            N'{"valorDocumento":"'
+          ,@inValorDocumento
+          , N'","idTipoDeduccion":'
+          ,@inIdTipoDeduccion
+          , N'}'
+        );
+
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario
+          , IdTipoEvento
+          , IPOrigen
+          , Parametros
+          , DatosAntes
+        )
+        VALUES (
+            @inIdUsuarioAdmin
+          , 8
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosAntes
+        );
+
+        COMMIT TRANSACTION;
+
+    END TRY
+    BEGIN CATCH
+
+        IF (@@TRANCOUNT > 0)
+            ROLLBACK TRANSACTION;
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_DesasociarDeduccion'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
+
+PRINT 'SPs administrativos creados exitosamente.';
+GO
