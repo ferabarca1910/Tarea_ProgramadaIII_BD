@@ -110,3 +110,108 @@ CREATE PROCEDURE dbo.sp_Login
   ,@outIdUsuario INT OUTPUT
   ,@outTipoUsuario TINYINT OUTPUT
   ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+    SET @outIdUsuario = NULL;
+    SET @outTipoUsuario = NULL;
+
+    BEGIN TRY
+        SELECT
+            @outIdUsuario = u.IdUsuario
+          ,@outTipoUsuario = u.Tipo
+        FROM dbo.Usuario AS u
+        WHERE (u.Username = @inUsername);
+
+        IF (@outIdUsuario IS NULL)
+        BEGIN
+            SET @outResultCode = 50001;
+            RETURN;
+        END;
+
+        IF EXISTS (
+            SELECT 1
+            FROM dbo.Usuario AS u
+            WHERE (u.IdUsuario = @outIdUsuario)
+              AND (u.Activo = 0)
+        )
+        BEGIN
+            INSERT INTO dbo.BitacoraEvento (
+                IdUsuario
+              , IdTipoEvento
+              , IPOrigen
+              , Parametros
+            )
+            VALUES (
+                @outIdUsuario
+              , 3
+              ,@inIPOrigen
+              , CONCAT(N'{"username":"', @inUsername, N'"}')
+            );
+
+            SET @outResultCode = 50003;
+            RETURN;
+        END;
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM dbo.Usuario AS u
+            WHERE (u.IdUsuario = @outIdUsuario)
+              AND (u.PasswordHash = @inPassword)
+        )
+        BEGIN
+            INSERT INTO dbo.BitacoraEvento (
+                IdUsuario
+              , IdTipoEvento
+              , IPOrigen
+              , Parametros
+            )
+            VALUES (
+                @outIdUsuario
+              , 2
+              ,@inIPOrigen
+              , CONCAT(N'{"username":"', @inUsername, N'"}')
+            );
+
+            SET @outResultCode = 50002;
+            RETURN;
+        END;
+
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario
+          , IdTipoEvento
+          , IPOrigen
+          , Parametros
+        )
+        VALUES (
+            @outIdUsuario
+          , 1
+          ,@inIPOrigen
+          , CONCAT(N'{"username":"', @inUsername, N'"}')
+        );
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_Login'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
