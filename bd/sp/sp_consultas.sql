@@ -668,3 +668,82 @@ BEGIN
     END CATCH;
 END;
 GO
+
+CREATE PROCEDURE dbo.sp_ConsultarDetalleDeduccionesSemana
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            sp.IdSemanaPlanilla
+          , sp.FechaInicio
+          , sp.FechaFin
+          , pse.IdPlanillaSemXEmpleado
+          , td.IdTipoDeduccion
+          , td.Nombre AS NombreDeduccion
+          , td.EsObligatoria
+          , td.EsPorcentual
+          , tm.IdTipoMovimiento
+          , tm.Nombre AS NombreMovimiento
+          , COUNT(mp.IdMovimientoPlanilla) AS CantidadMovimientos
+          , SUM(mp.Monto) AS MontoTotal
+        FROM dbo.PlanillaSemXEmpleado AS pse
+        INNER JOIN dbo.SemanaPlanilla AS sp
+            ON (sp.IdSemanaPlanilla = pse.IdSemanaPlanilla)
+        INNER JOIN dbo.MovimientoPlanilla AS mp
+            ON (mp.IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado)
+        INNER JOIN dbo.TipoMovimiento AS tm
+            ON (tm.IdTipoMovimiento = mp.IdTipoMovimiento)
+        INNER JOIN dbo.TipoDeduccion AS td
+            ON (td.IdTipoMovimiento = tm.IdTipoMovimiento)
+        WHERE (pse.IdEmpleado = @inIdEmpleado)
+          AND (tm.Accion = '-')
+          AND (@inIdSemanaPlanilla IS NULL OR sp.IdSemanaPlanilla = @inIdSemanaPlanilla)
+          AND (@inFechaInicio IS NULL OR sp.FechaInicio >= @inFechaInicio)
+          AND (@inFechaFin IS NULL OR sp.FechaFin <= @inFechaFin)
+        GROUP BY
+            sp.IdSemanaPlanilla
+          , sp.FechaInicio
+          , sp.FechaFin
+          , pse.IdPlanillaSemXEmpleado
+          , td.IdTipoDeduccion
+          , td.Nombre
+          , td.EsObligatoria
+          , td.EsPorcentual
+          , tm.IdTipoMovimiento
+          , tm.Nombre
+        ORDER BY
+            sp.FechaInicio DESC
+          , td.Nombre;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ConsultarDetalleDeduccionesSemana'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
