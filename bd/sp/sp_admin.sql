@@ -222,3 +222,261 @@ BEGIN
         SET @outResultCode = 50008;
         RETURN;
     END;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        UPDATE dbo.DeduccionEmpleado
+        SET FechaFin = CAST(GETDATE() AS DATE)
+        WHERE (IdEmpleado = @vIdEmpleado)
+          AND (FechaFin IS NULL);
+
+        UPDATE dbo.Empleado
+        SET Activo = 0
+        WHERE (IdEmpleado = @vIdEmpleado);
+
+        UPDATE dbo.Usuario
+        SET Activo = 0
+        WHERE (IdUsuario = @vIdUsuario);
+
+        SET @vParametros = CONCAT(
+            N'{"valorDocumento":"'
+          ,@inValorDocumento
+          , N'"}'
+        );
+
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario
+          , IdTipoEvento
+          , IPOrigen
+          , Parametros
+          , DatosAntes
+        )
+        VALUES (
+            @inIdUsuarioAdmin
+          , 10
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosAntes
+        );
+
+        COMMIT TRANSACTION;
+
+    END TRY
+    BEGIN CATCH
+
+        IF (@@TRANCOUNT > 0)
+            ROLLBACK TRANSACTION;
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_EliminarEmpleado'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_AsociarDeduccion
+    @inValorDocumento VARCHAR(30)
+  ,@inIdTipoDeduccion INT
+  ,@inMontoFijo DECIMAL(12,2)
+  ,@inFechaInicio DATE
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    DECLARE @vIdEmpleado INT;
+    DECLARE @vValor DECIMAL(10,4);
+    DECLARE @vParametros NVARCHAR(MAX);
+    DECLARE @vDatosDespues NVARCHAR(MAX);
+
+    SELECT
+        @vIdEmpleado = e.IdEmpleado
+    FROM dbo.Empleado AS e
+    WHERE (e.ValorDocumentoIdentidad = @inValorDocumento)
+      AND (e.Activo = 1);
+
+    IF (@vIdEmpleado IS NULL)
+    BEGIN
+        SET @outResultCode = 50008;
+        RETURN;
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM dbo.TipoDeduccion AS td
+        WHERE (td.IdTipoDeduccion = @inIdTipoDeduccion)
+          AND (td.EsObligatoria = 0)
+    )
+    BEGIN
+        SET @outResultCode = 50008;
+        RETURN;
+    END;
+
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.DeduccionEmpleado AS de
+        WHERE (de.IdEmpleado = @vIdEmpleado)
+          AND (de.IdTipoDeduccion = @inIdTipoDeduccion)
+          AND (de.FechaFin IS NULL)
+    )
+    BEGIN
+        SET @outResultCode = 0;
+        RETURN;
+    END;
+
+    SELECT
+        @vValor = CASE
+            WHEN (td.EsPorcentual = 1) THEN td.Valor
+            ELSE CONVERT(DECIMAL(10,4), @inMontoFijo)
+        END
+    FROM dbo.TipoDeduccion AS td
+    WHERE (td.IdTipoDeduccion = @inIdTipoDeduccion);
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        INSERT INTO dbo.DeduccionEmpleado (
+            IdEmpleado
+          , IdTipoDeduccion
+          , Valor
+          , FechaInicio
+          , FechaFin
+        )
+        VALUES (
+            @vIdEmpleado
+          ,@inIdTipoDeduccion
+          ,@vValor
+          ,@inFechaInicio
+          , NULL
+        );
+
+        SET @vParametros = CONCAT(
+            N'{"valorDocumento":"'
+          ,@inValorDocumento
+          , N'","idTipoDeduccion":'
+          ,@inIdTipoDeduccion
+          , N'}'
+        );
+
+        SET @vDatosDespues = CONCAT(
+            N'{"idEmpleado":'
+          ,@vIdEmpleado
+          , N',"idTipoDeduccion":'
+          ,@inIdTipoDeduccion
+          , N',"valor":'
+          ,@vValor
+          , N'}'
+        );
+
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario
+          , IdTipoEvento
+          , IPOrigen
+          , Parametros
+          , DatosDespues
+        )
+        VALUES (
+            @inIdUsuarioAdmin
+          , 8
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosDespues
+        );
+
+        COMMIT TRANSACTION;
+
+    END TRY
+    BEGIN CATCH
+
+        IF (@@TRANCOUNT > 0)
+            ROLLBACK TRANSACTION;
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_AsociarDeduccion'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_DesasociarDeduccion
+    @inValorDocumento VARCHAR(30)
+  ,@inIdTipoDeduccion INT
+  ,@inFechaFin DATE
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    DECLARE @vIdEmpleado INT;
+    DECLARE @vDatosAntes NVARCHAR(MAX);
+    DECLARE @vParametros NVARCHAR(MAX);
+
+    SELECT
+        @vIdEmpleado = e.IdEmpleado
+    FROM dbo.Empleado AS e
+    WHERE (e.ValorDocumentoIdentidad = @inValorDocumento)
+      AND (e.Activo = 1);
+
+    IF (@vIdEmpleado IS NULL)
+    BEGIN
+        SET @outResultCode = 50008;
+        RETURN;
+    END;
+
+    SELECT TOP (1)
+        @vDatosAntes = CONCAT(
+            N'{"idEmpleado":'
+          , de.IdEmpleado
+          , N',"idTipoDeduccion":'
+          , de.IdTipoDeduccion
+          , N',"valor":'
+          , de.Valor
+          , N'}'
+        )
+    FROM dbo.DeduccionEmpleado AS de
+    WHERE (de.IdEmpleado = @vIdEmpleado)
+      AND (de.IdTipoDeduccion = @inIdTipoDeduccion)
+      AND (de.FechaFin IS NULL);
+
+    IF (@vDatosAntes IS NULL)
+    BEGIN
+        SET @outResultCode = 0;
+        RETURN;
+    END;
