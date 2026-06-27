@@ -427,3 +427,176 @@ BEGIN
     END CATCH;
 END;
 GO
+CREATE PROCEDURE dbo.sp_ActualizarEmpleado
+    @inIdEmpleado INT
+  ,@inNombre VARCHAR(150)
+  ,@inValorDocumento VARCHAR(30)
+  ,@inNombrePuesto VARCHAR(100)
+  ,@inUsername VARCHAR(50)
+  ,@inPassword VARCHAR(255) = NULL
+  ,@inCuentaBancaria VARCHAR(30) = NULL
+  ,@inFechaIngreso DATE
+  ,@inActivo BIT = 1
+  ,@inIdUsuarioAdmin INT
+  ,@inIPOrigen VARCHAR(45) = '127.0.0.1'
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    DECLARE @vIdPuesto INT;
+    DECLARE @vIdUsuario INT;
+    DECLARE @vDatosAntes NVARCHAR(MAX);
+    DECLARE @vDatosDespues NVARCHAR(MAX);
+    DECLARE @vParametros NVARCHAR(MAX);
+
+    BEGIN TRY
+        SELECT
+            @vIdPuesto = p.IdPuesto
+        FROM dbo.Puesto AS p
+        WHERE (p.Nombre = @inNombrePuesto);
+
+        IF (@vIdPuesto IS NULL)
+        BEGIN
+            SET @outResultCode = 50008;
+            RETURN;
+        END;
+
+        SELECT
+            @vIdUsuario = e.IdUsuario
+          ,@vDatosAntes = CONCAT(
+                N'{"idEmpleado":'
+              , e.IdEmpleado
+              , N',"nombre":"'
+              , e.Nombre
+              , N'","valorDocumento":"'
+              , e.ValorDocumentoIdentidad
+              , N'","idPuesto":'
+              , e.IdPuesto
+              , N',"cuentaBancaria":"'
+              , ISNULL(e.CuentaBancaria, '')
+              , N'","fechaIngreso":"'
+              , CONVERT(VARCHAR(10), e.FechaIngreso, 120)
+              , N'","activo":'
+              , CONVERT(VARCHAR(1), e.Activo)
+              , N'}'
+            )
+        FROM dbo.Empleado AS e
+        WHERE (e.IdEmpleado = @inIdEmpleado);
+
+        IF (@vIdUsuario IS NULL)
+        BEGIN
+            SET @outResultCode = 50008;
+            RETURN;
+        END;
+
+        IF EXISTS (
+            SELECT 1
+            FROM dbo.Empleado AS e
+            WHERE (e.ValorDocumentoIdentidad = @inValorDocumento)
+              AND (e.IdEmpleado <> @inIdEmpleado)
+        )
+        BEGIN
+            SET @outResultCode = 50006;
+            RETURN;
+        END;
+
+        IF EXISTS (
+            SELECT 1
+            FROM dbo.Empleado AS e
+            WHERE (e.Nombre = @inNombre)
+              AND (e.IdEmpleado <> @inIdEmpleado)
+        )
+        BEGIN
+            SET @outResultCode = 50007;
+            RETURN;
+        END;
+
+        BEGIN TRANSACTION;
+
+        UPDATE dbo.Usuario
+        SET Username = @inUsername
+          , PasswordHash = COALESCE(@inPassword, PasswordHash)
+          , Activo = @inActivo
+        WHERE (IdUsuario = @vIdUsuario);
+
+        UPDATE dbo.Empleado
+        SET Nombre = @inNombre
+          , ValorDocumentoIdentidad = @inValorDocumento
+          , IdPuesto = @vIdPuesto
+          , CuentaBancaria = @inCuentaBancaria
+          , FechaIngreso = @inFechaIngreso
+          , Activo = @inActivo
+        WHERE (IdEmpleado = @inIdEmpleado);
+
+        SET @vParametros = CONCAT(
+            N'{"idEmpleado":'
+          ,@inIdEmpleado
+          , N'}'
+        );
+
+        SET @vDatosDespues = CONCAT(
+            N'{"idEmpleado":'
+          ,@inIdEmpleado
+          , N',"nombre":"'
+          ,@inNombre
+          , N'","valorDocumento":"'
+          ,@inValorDocumento
+          , N'","puesto":"'
+          ,@inNombrePuesto
+          , N'","cuentaBancaria":"'
+          , ISNULL(@inCuentaBancaria, '')
+          , N'","fechaIngreso":"'
+          , CONVERT(VARCHAR(10), @inFechaIngreso, 120)
+          , N'","activo":'
+          , CONVERT(VARCHAR(1), @inActivo)
+          , N'}'
+        );
+
+        INSERT INTO dbo.BitacoraEvento (
+            IdUsuario
+          , IdTipoEvento
+          , IPOrigen
+          , Parametros
+          , DatosAntes
+          , DatosDespues
+        )
+        VALUES (
+            @inIdUsuarioAdmin
+          , 8
+          ,@inIPOrigen
+          ,@vParametros
+          ,@vDatosAntes
+          ,@vDatosDespues
+        );
+
+        COMMIT TRANSACTION;
+
+    END TRY
+    BEGIN CATCH
+
+        IF (@@TRANCOUNT > 0)
+            ROLLBACK TRANSACTION;
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ActualizarEmpleado'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
