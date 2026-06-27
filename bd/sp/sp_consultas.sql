@@ -747,3 +747,79 @@ BEGIN
     END CATCH;
 END;
 GO
+
+CREATE PROCEDURE dbo.sp_ConsultarDetalleHorasSemana
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            sp.IdSemanaPlanilla
+          , sp.FechaInicio AS FechaInicioSemana
+          , sp.FechaFin AS FechaFinSemana
+          , ma.IdMarcaAsistencia
+          , ma.FechaOperacion
+          , ma.FechaHoraEntrada
+          , ma.FechaHoraSalida
+          , SUM(CASE WHEN tm.IdTipoMovimiento = 1 THEN mp.Cantidad ELSE 0 END) AS HorasOrdinarias
+          , SUM(CASE WHEN tm.IdTipoMovimiento = 2 THEN mp.Cantidad ELSE 0 END) AS HorasExtraNormales
+          , SUM(CASE WHEN tm.IdTipoMovimiento = 3 THEN mp.Cantidad ELSE 0 END) AS HorasExtraDobles
+          , SUM(CASE WHEN tm.IdTipoMovimiento IN (1, 2, 3) THEN mp.Monto ELSE 0 END) AS MontoGenerado
+        FROM dbo.PlanillaSemXEmpleado AS pse
+        INNER JOIN dbo.SemanaPlanilla AS sp
+            ON (sp.IdSemanaPlanilla = pse.IdSemanaPlanilla)
+        INNER JOIN dbo.MovimientoPlanilla AS mp
+            ON (mp.IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado)
+        INNER JOIN dbo.TipoMovimiento AS tm
+            ON (tm.IdTipoMovimiento = mp.IdTipoMovimiento)
+        INNER JOIN dbo.MarcaAsistencia AS ma
+            ON (ma.IdMarcaAsistencia = mp.IdMarcaAsistencia)
+        WHERE (pse.IdEmpleado = @inIdEmpleado)
+          AND (tm.IdTipoMovimiento IN (1, 2, 3))
+          AND (@inIdSemanaPlanilla IS NULL OR sp.IdSemanaPlanilla = @inIdSemanaPlanilla)
+          AND (@inFechaInicio IS NULL OR sp.FechaInicio >= @inFechaInicio)
+          AND (@inFechaFin IS NULL OR sp.FechaFin <= @inFechaFin)
+        GROUP BY
+            sp.IdSemanaPlanilla
+          , sp.FechaInicio
+          , sp.FechaFin
+          , ma.IdMarcaAsistencia
+          , ma.FechaOperacion
+          , ma.FechaHoraEntrada
+          , ma.FechaHoraSalida
+        ORDER BY
+            ma.FechaOperacion
+          , ma.FechaHoraEntrada;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ConsultarDetalleHorasSemana'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
+
