@@ -600,3 +600,71 @@ BEGIN
     END CATCH;
 END;
 GO
+
+CREATE PROCEDURE dbo.sp_ConsultarPlanillaSemanal
+    @inIdEmpleado INT
+  ,@inIdSemanaPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            pse.IdPlanillaSemXEmpleado
+          , sp.IdSemanaPlanilla
+          , sp.FechaInicio
+          , sp.FechaFin
+          , sp.Cerrada
+          , e.IdEmpleado
+          , e.Nombre AS NombreEmpleado
+          , e.ValorDocumentoIdentidad
+          , p.Nombre AS NombrePuesto
+          , p.SalarioXHora
+          , pse.HorasOrdinarias
+          , pse.HorasExtraNormales
+          , pse.HorasExtraDobles
+          , pse.SalarioBruto
+          , pse.TotalDeducciones
+          , pse.SalarioNeto
+        FROM dbo.PlanillaSemXEmpleado AS pse
+        INNER JOIN dbo.SemanaPlanilla AS sp
+            ON (sp.IdSemanaPlanilla = pse.IdSemanaPlanilla)
+        INNER JOIN dbo.Empleado AS e
+            ON (e.IdEmpleado = pse.IdEmpleado)
+        INNER JOIN dbo.Puesto AS p
+            ON (p.IdPuesto = e.IdPuesto)
+        WHERE (pse.IdEmpleado = @inIdEmpleado)
+          AND (@inIdSemanaPlanilla IS NULL OR sp.IdSemanaPlanilla = @inIdSemanaPlanilla)
+          AND (@inFechaInicio IS NULL OR sp.FechaInicio >= @inFechaInicio)
+          AND (@inFechaFin IS NULL OR sp.FechaFin <= @inFechaFin)
+        ORDER BY
+            sp.FechaInicio DESC;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ConsultarPlanillaSemanal'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
