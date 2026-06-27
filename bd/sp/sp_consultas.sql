@@ -823,3 +823,130 @@ BEGIN
 END;
 GO
 
+CREATE PROCEDURE dbo.sp_ConsultarPlanillaMensual
+    @inIdEmpleado INT
+  ,@inIdMesPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            pme.IdPlanillaMesXEmpleado
+          , mp.IdMesPlanilla
+          , mp.FechaInicio
+          , mp.FechaFin
+          , mp.CantidadJueves
+          , mp.Cerrado
+          , e.IdEmpleado
+          , e.Nombre AS NombreEmpleado
+          , e.ValorDocumentoIdentidad
+          , p.Nombre AS NombrePuesto
+          , pme.SalarioBrutoMensual
+          , pme.TotalDeduccionesMensual
+          , pme.SalarioNetoMensual
+        FROM dbo.PlanillaMesXEmpleado AS pme
+        INNER JOIN dbo.MesPlanilla AS mp
+            ON (mp.IdMesPlanilla = pme.IdMesPlanilla)
+        INNER JOIN dbo.Empleado AS e
+            ON (e.IdEmpleado = pme.IdEmpleado)
+        INNER JOIN dbo.Puesto AS p
+            ON (p.IdPuesto = e.IdPuesto)
+        WHERE (pme.IdEmpleado = @inIdEmpleado)
+          AND (@inIdMesPlanilla IS NULL OR mp.IdMesPlanilla = @inIdMesPlanilla)
+          AND (@inFechaInicio IS NULL OR mp.FechaInicio >= @inFechaInicio)
+          AND (@inFechaFin IS NULL OR mp.FechaFin <= @inFechaFin)
+        ORDER BY
+            mp.FechaInicio DESC;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ConsultarPlanillaMensual'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_ConsultarDetalleDeduccionesMes
+    @inIdEmpleado INT
+  ,@inIdMesPlanilla INT = NULL
+  ,@inFechaInicio DATE = NULL
+  ,@inFechaFin DATE = NULL
+  ,@outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @outResultCode = 0;
+
+    BEGIN TRY
+        SELECT
+            mp.IdMesPlanilla
+          , mp.FechaInicio
+          , mp.FechaFin
+          , pme.IdPlanillaMesXEmpleado
+          , td.IdTipoDeduccion
+          , td.Nombre AS NombreDeduccion
+          , td.EsObligatoria
+          , td.EsPorcentual
+          , dxm.MontoTotal
+        FROM dbo.PlanillaMesXEmpleado AS pme
+        INNER JOIN dbo.MesPlanilla AS mp
+            ON (mp.IdMesPlanilla = pme.IdMesPlanilla)
+        INNER JOIN dbo.DeduccionXEmpleadoXMes AS dxm
+            ON (dxm.IdPlanillaMesXEmpleado = pme.IdPlanillaMesXEmpleado)
+        INNER JOIN dbo.TipoDeduccion AS td
+            ON (td.IdTipoDeduccion = dxm.IdTipoDeduccion)
+        WHERE (pme.IdEmpleado = @inIdEmpleado)
+          AND (@inIdMesPlanilla IS NULL OR mp.IdMesPlanilla = @inIdMesPlanilla)
+          AND (@inFechaInicio IS NULL OR mp.FechaInicio >= @inFechaInicio)
+          AND (@inFechaFin IS NULL OR mp.FechaFin <= @inFechaFin)
+        ORDER BY
+            mp.FechaInicio DESC
+          , td.Nombre;
+
+    END TRY
+    BEGIN CATCH
+
+        SET @outResultCode = 50008;
+
+        INSERT INTO dbo.DBErrors (
+            NombreSP
+          , Mensaje
+          , Severidad
+          , Estado
+          , Linea
+        )
+        VALUES (
+            'sp_ConsultarDetalleDeduccionesMes'
+          , ERROR_MESSAGE()
+          , ERROR_SEVERITY()
+          , ERROR_STATE()
+          , ERROR_LINE()
+        );
+
+    END CATCH;
+END;
+GO
+
