@@ -62,3 +62,25 @@ BEGIN
     RETURN @vDia;
 END;
 GO
+--======================================================================
+-- Función auxiliar: cuenta jueves entre dos fechas
+--======================================================================
+IF OBJECT_ID('dbo.fn_ContarJueves', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fn_ContarJueves;
+GO
+
+CREATE FUNCTION dbo.fn_ContarJueves(@inFechaInicio DATE, @inFechaFin DATE)
+RETURNS TINYINT
+AS
+BEGIN
+    DECLARE @vCantidad TINYINT = 0;
+    DECLARE @vFecha    DATE    = @inFechaInicio;
+    WHILE (@vFecha <= @inFechaFin)
+    BEGIN
+        IF (DATEPART(WEEKDAY, @vFecha) = 5)
+            SET @vCantidad = @vCantidad + 1;
+        SET @vFecha = DATEADD(DAY, 1, @vFecha);
+    END;
+    RETURN @vCantidad;
+END;
+GO
