@@ -511,3 +511,103 @@ BEGIN
     END CATCH;
 END;
 GO
+--======================================================================
+-- sp_AperturaSemana
+--======================================================================
+IF OBJECT_ID('dbo.sp_AperturaSemana', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_AperturaSemana;
+GO
+
+CREATE PROCEDURE dbo.sp_AperturaSemana
+    @inFechaInicioSemana DATE
+  , @inFechaFinSemana    DATE
+  , @outResultCode       INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @outResultCode = 0;
+
+    DECLARE @vIdMesPlanilla    INT;
+    DECLARE @vIdSemanaPlanilla INT;
+
+    SELECT @vIdMesPlanilla = mp.IdMesPlanilla
+    FROM   dbo.MesPlanilla AS mp
+    WHERE  (mp.FechaInicio <= @inFechaInicioSemana)
+      AND  (mp.FechaFin    >= @inFechaFinSemana)
+      AND  (mp.Cerrado      = 0);
+
+    IF (@vIdMesPlanilla IS NULL)
+    BEGIN
+        SET @outResultCode = 50016;
+        RETURN;
+    END;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        INSERT INTO dbo.SemanaPlanilla (IdMesPlanilla, FechaInicio, FechaFin, Cerrada)
+        VALUES (@vIdMesPlanilla, @inFechaInicioSemana, @inFechaFinSemana, 0);
+        SET @vIdSemanaPlanilla = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.PlanillaSemXEmpleado (
+            IdSemanaPlanilla, IdEmpleado, SalarioBruto, TotalDeducciones,
+            SalarioNeto, HorasOrdinarias, HorasExtraNormales, HorasExtraDobles
+        )
+        SELECT @vIdSemanaPlanilla, e.IdEmpleado, 0, 0, 0, 0, 0, 0
+        FROM   dbo.Empleado AS e
+        WHERE  (e.Activo = 1);
+
+        COMMIT TRANSACTION;
+        PRINT 'Apertura de semana completada. IdSemanaPlanilla=' + CAST(@vIdSemanaPlanilla AS VARCHAR(10));
+    END TRY
+    BEGIN CATCH
+        IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION;
+        SET @outResultCode = 50008;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_AperturaSemana', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+    END CATCH;
+END;
+GO
+
+--======================================================================
+-- sp_AperturaMes
+--======================================================================
+IF OBJECT_ID('dbo.sp_AperturaMes', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_AperturaMes;
+GO
+
+CREATE PROCEDURE dbo.sp_AperturaMes
+    @inFechaInicioMes  DATE
+  , @inFechaFinMes     DATE
+  , @inCantidadJueves  TINYINT
+  , @outResultCode     INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @outResultCode = 0;
+
+    DECLARE @vIdMesPlanilla INT;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        INSERT INTO dbo.MesPlanilla (FechaInicio, FechaFin, CantidadJueves, Cerrado)
+        VALUES (@inFechaInicioMes, @inFechaFinMes, @inCantidadJueves, 0);
+        SET @vIdMesPlanilla = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.PlanillaMesXEmpleado (IdMesPlanilla, IdEmpleado, SalarioBrutoMensual, TotalDeduccionesMensual, SalarioNetoMensual)
+        SELECT @vIdMesPlanilla, e.IdEmpleado, 0, 0, 0
+        FROM   dbo.Empleado AS e
+        WHERE  (e.Activo = 1);
+
+        COMMIT TRANSACTION;
+        PRINT 'Apertura de mes completada. IdMesPlanilla=' + CAST(@vIdMesPlanilla AS VARCHAR(10));
+    END TRY
+    BEGIN CATCH
+        IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION;
+        SET @outResultCode = 50008;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_AperturaMes', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+    END CATCH;
+END;
+GO
