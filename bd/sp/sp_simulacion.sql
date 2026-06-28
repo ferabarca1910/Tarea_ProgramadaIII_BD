@@ -328,3 +328,186 @@ BEGIN
     END CATCH;
 END;
 GO
+--======================================================================
+-- sp_CierreSemanal
+--======================================================================
+IF OBJECT_ID('dbo.sp_CierreSemanal', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_CierreSemanal;
+GO
+
+CREATE PROCEDURE dbo.sp_CierreSemanal
+    @inFechaJueves       DATE
+  , @inIdUsuarioSistema  INT
+  , @inIPOrigen          VARCHAR(45) = '127.0.0.1'
+  , @outResultCode       INT         OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @outResultCode = 0;
+
+    DECLARE @vIdSemanaPlanilla INT;
+    DECLARE @vIdMesPlanilla    INT;
+    DECLARE @vCantidadJueves   TINYINT;
+
+    SELECT
+        @vIdSemanaPlanilla = sp.IdSemanaPlanilla
+      , @vIdMesPlanilla    = sp.IdMesPlanilla
+    FROM dbo.SemanaPlanilla AS sp
+    WHERE (sp.FechaFin = @inFechaJueves)
+      AND (sp.Cerrada  = 0);
+
+    IF (@vIdSemanaPlanilla IS NULL)
+    BEGIN
+        SET @outResultCode = 50015;
+        RETURN;
+    END;
+
+    SELECT @vCantidadJueves = mp.CantidadJueves
+    FROM   dbo.MesPlanilla AS mp
+    WHERE  (mp.IdMesPlanilla = @vIdMesPlanilla);
+
+    -- Pre-calcular todas las deducciones (set-based, sin cursores)
+    DECLARE @tDeduccionesPct TABLE (
+        IdPlanillaSemXEmpleado INT
+      , IdPlanillaMesXEmpleado INT
+      , IdTipoDeduccion        INT
+      , IdTipoMovimiento       INT
+      , Monto                  DECIMAL(12,2)
+    );
+
+    INSERT INTO @tDeduccionesPct (IdPlanillaSemXEmpleado, IdPlanillaMesXEmpleado, IdTipoDeduccion, IdTipoMovimiento, Monto)
+    SELECT
+        pse.IdPlanillaSemXEmpleado
+      , pme.IdPlanillaMesXEmpleado
+      , de.IdTipoDeduccion
+      , td.IdTipoMovimiento
+      , ROUND(pse.SalarioBruto * td.Valor, 2)
+    FROM   dbo.PlanillaSemXEmpleado AS pse
+    INNER JOIN dbo.DeduccionEmpleado  AS de  ON (de.IdEmpleado      = pse.IdEmpleado)
+    INNER JOIN dbo.TipoDeduccion      AS td  ON (td.IdTipoDeduccion = de.IdTipoDeduccion)
+    LEFT  JOIN dbo.PlanillaMesXEmpleado AS pme
+           ON (pme.IdEmpleado   = pse.IdEmpleado)
+          AND (pme.IdMesPlanilla = @vIdMesPlanilla)
+    WHERE  (pse.IdSemanaPlanilla = @vIdSemanaPlanilla)
+      AND  (td.EsPorcentual      = 1)
+      AND  (de.FechaInicio       <= @inFechaJueves)
+      AND  (de.FechaFin IS NULL OR de.FechaFin >= @inFechaJueves);
+
+    DECLARE @tDeduccionesFijas TABLE (
+        IdPlanillaSemXEmpleado INT
+      , IdPlanillaMesXEmpleado INT
+      , IdTipoDeduccion        INT
+      , IdTipoMovimiento       INT
+      , Monto                  DECIMAL(12,2)
+    );
+
+    INSERT INTO @tDeduccionesFijas (IdPlanillaSemXEmpleado, IdPlanillaMesXEmpleado, IdTipoDeduccion, IdTipoMovimiento, Monto)
+    SELECT
+        pse.IdPlanillaSemXEmpleado
+      , pme.IdPlanillaMesXEmpleado
+      , de.IdTipoDeduccion
+      , td.IdTipoMovimiento
+      , ROUND(de.Valor / @vCantidadJueves, 2)
+    FROM   dbo.PlanillaSemXEmpleado AS pse
+    INNER JOIN dbo.DeduccionEmpleado  AS de  ON (de.IdEmpleado      = pse.IdEmpleado)
+    INNER JOIN dbo.TipoDeduccion      AS td  ON (td.IdTipoDeduccion = de.IdTipoDeduccion)
+    LEFT  JOIN dbo.PlanillaMesXEmpleado AS pme
+           ON (pme.IdEmpleado   = pse.IdEmpleado)
+          AND (pme.IdMesPlanilla = @vIdMesPlanilla)
+    WHERE  (pse.IdSemanaPlanilla = @vIdSemanaPlanilla)
+      AND  (td.EsPorcentual      = 0)
+      AND  (de.Valor             > 0)
+      AND  (de.FechaInicio       <= @inFechaJueves)
+      AND  (de.FechaFin IS NULL OR de.FechaFin >= @inFechaJueves);
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Movimientos de débito porcentuales
+        INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, Fecha, Cantidad, Monto)
+        SELECT dp.IdPlanillaSemXEmpleado, dp.IdTipoMovimiento, @inFechaJueves, 0, -dp.Monto
+        FROM   @tDeduccionesPct AS dp;
+
+        -- Movimientos de débito fijos
+        INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, Fecha, Cantidad, Monto)
+        SELECT df.IdPlanillaSemXEmpleado, df.IdTipoMovimiento, @inFechaJueves, 0, -df.Monto
+        FROM   @tDeduccionesFijas AS df;
+
+        -- Actualizar TotalDeducciones y SalarioNeto en PlanillaSemXEmpleado
+        UPDATE pse
+        SET
+            pse.TotalDeducciones = ISNULL(t.MontoTotal, 0)
+          , pse.SalarioNeto      = pse.SalarioBruto - ISNULL(t.MontoTotal, 0)
+        FROM dbo.PlanillaSemXEmpleado AS pse
+        LEFT JOIN (
+            SELECT IdPlanillaSemXEmpleado, SUM(Monto) AS MontoTotal
+            FROM (
+                SELECT IdPlanillaSemXEmpleado, Monto FROM @tDeduccionesPct
+                UNION ALL
+                SELECT IdPlanillaSemXEmpleado, Monto FROM @tDeduccionesFijas
+            ) AS u
+            GROUP BY IdPlanillaSemXEmpleado
+        ) AS t ON (t.IdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado)
+        WHERE (pse.IdSemanaPlanilla = @vIdSemanaPlanilla);
+
+        -- Acumular en DeduccionXEmpleadoXMes (porcentuales)
+        MERGE dbo.DeduccionXEmpleadoXMes AS dest
+        USING (
+            SELECT IdPlanillaMesXEmpleado, IdTipoDeduccion, SUM(Monto) AS Monto
+            FROM   @tDeduccionesPct
+            WHERE  (IdPlanillaMesXEmpleado IS NOT NULL)
+            GROUP BY IdPlanillaMesXEmpleado, IdTipoDeduccion
+        ) AS src
+        ON    (dest.IdPlanillaMesXEmpleado = src.IdPlanillaMesXEmpleado)
+          AND (dest.IdTipoDeduccion        = src.IdTipoDeduccion)
+        WHEN MATCHED     THEN UPDATE SET MontoTotal = ISNULL(MontoTotal, 0) + src.Monto
+        WHEN NOT MATCHED THEN INSERT (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
+                              VALUES (src.IdPlanillaMesXEmpleado, src.IdTipoDeduccion, src.Monto);
+
+        -- Acumular en DeduccionXEmpleadoXMes (fijas)
+        MERGE dbo.DeduccionXEmpleadoXMes AS dest
+        USING (
+            SELECT IdPlanillaMesXEmpleado, IdTipoDeduccion, SUM(Monto) AS Monto
+            FROM   @tDeduccionesFijas
+            WHERE  (IdPlanillaMesXEmpleado IS NOT NULL)
+            GROUP BY IdPlanillaMesXEmpleado, IdTipoDeduccion
+        ) AS src
+        ON    (dest.IdPlanillaMesXEmpleado = src.IdPlanillaMesXEmpleado)
+          AND (dest.IdTipoDeduccion        = src.IdTipoDeduccion)
+        WHEN MATCHED     THEN UPDATE SET MontoTotal = ISNULL(MontoTotal, 0) + src.Monto
+        WHEN NOT MATCHED THEN INSERT (IdPlanillaMesXEmpleado, IdTipoDeduccion, MontoTotal)
+                              VALUES (src.IdPlanillaMesXEmpleado, src.IdTipoDeduccion, src.Monto);
+
+        -- Acumular en PlanillaMesXEmpleado
+        UPDATE pme
+        SET
+            SalarioBrutoMensual     = ISNULL(pme.SalarioBrutoMensual, 0)     + ISNULL(pse.SalarioBruto,       0)
+          , TotalDeduccionesMensual = ISNULL(pme.TotalDeduccionesMensual, 0) + ISNULL(pse.TotalDeducciones,   0)
+          , SalarioNetoMensual      = ISNULL(pme.SalarioNetoMensual, 0)      + ISNULL(pse.SalarioNeto,        0)
+        FROM dbo.PlanillaMesXEmpleado AS pme
+        INNER JOIN dbo.PlanillaSemXEmpleado AS pse ON (pse.IdEmpleado = pme.IdEmpleado)
+        WHERE (pse.IdSemanaPlanilla = @vIdSemanaPlanilla)
+          AND (pme.IdMesPlanilla   = @vIdMesPlanilla);
+
+        -- Cerrar la semana
+        UPDATE dbo.SemanaPlanilla SET Cerrada = 1 WHERE (IdSemanaPlanilla = @vIdSemanaPlanilla);
+
+        INSERT INTO dbo.BitacoraEvento (IdUsuario, IdTipoEvento, IPOrigen, Parametros)
+        VALUES (
+            @inIdUsuarioSistema
+          , 22
+          , @inIPOrigen
+          , CONCAT(N'{"cierre_semanal":"', CONVERT(VARCHAR, @inFechaJueves, 120), N'"}')
+        );
+
+        COMMIT TRANSACTION;
+        PRINT 'Cierre semanal del ' + CONVERT(VARCHAR, @inFechaJueves, 103) + ' completado.';
+    END TRY
+    BEGIN CATCH
+        IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION;
+        SET @outResultCode = 50008;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_CierreSemanal', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+    END CATCH;
+END;
+GO
