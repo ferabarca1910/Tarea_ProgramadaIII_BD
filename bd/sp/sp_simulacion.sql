@@ -84,3 +84,54 @@ BEGIN
     RETURN @vCantidad;
 END;
 GO
+--======================================================================
+-- sp_InicializarSistema
+-- Crea el primer MesPlanilla y SemanaPlanilla antes de correr la sim.
+--======================================================================
+IF OBJECT_ID('dbo.sp_InicializarSistema', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_InicializarSistema;
+GO
+
+CREATE PROCEDURE dbo.sp_InicializarSistema
+    @inFechaInicioSimulacion DATE       -- Debe ser viernes
+  , @outResultCode           INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @outResultCode = 0;
+
+    DECLARE @vFechaFinMes DATE;
+    DECLARE @vMesInicio   INT    = MONTH(@inFechaInicioSimulacion);
+    DECLARE @vAnioInicio  INT    = YEAR(@inFechaInicioSimulacion);
+    DECLARE @vNumJueves   TINYINT;
+    DECLARE @vIdMes       INT;
+    DECLARE @vFechaFinSem DATE;
+
+    SET @vFechaFinMes = dbo.fn_UltimoJuevesDelMes(@vAnioInicio, @vMesInicio);
+    SET @vNumJueves   = dbo.fn_ContarJueves(@inFechaInicioSimulacion, @vFechaFinMes);
+    -- Primera semana: viernes de inicio → jueves (6 días después)
+    SET @vFechaFinSem = DATEADD(DAY, 6, @inFechaInicioSimulacion);
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        INSERT INTO dbo.MesPlanilla (FechaInicio, FechaFin, CantidadJueves, Cerrado)
+        VALUES (@inFechaInicioSimulacion, @vFechaFinMes, @vNumJueves, 0);
+        SET @vIdMes = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.SemanaPlanilla (IdMesPlanilla, FechaInicio, FechaFin, Cerrada)
+        VALUES (@vIdMes, @inFechaInicioSimulacion, @vFechaFinSem, 0);
+
+        COMMIT TRANSACTION;
+        PRINT 'Sistema inicializado. Primera semana: '
+            + CONVERT(VARCHAR, @inFechaInicioSimulacion, 103)
+            + ' - ' + CONVERT(VARCHAR, @vFechaFinSem, 103);
+    END TRY
+    BEGIN CATCH
+        IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION;
+        SET @outResultCode = 50008;
+        INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
+        VALUES ('sp_InicializarSistema', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
+    END CATCH;
+END;
+GO
