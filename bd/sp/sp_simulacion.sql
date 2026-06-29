@@ -1,11 +1,3 @@
---======================================================================
--- sp_simulacion.sql
--- Simulación de planilla obrera
--- CORREGIDO:
---   1. Iteración por fechas CONSECUTIVAS (no salta fechas faltantes en XML)
---   2. Procesamiento de asistencias TRANSACCIONAL POR EMPLEADO
---======================================================================
-
 USE PlanillaObrera;
 GO
 
@@ -14,9 +6,7 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 
---======================================================================
--- Función auxiliar: determina si una fecha es domingo o feriado
---======================================================================
+--Función auxiliar: determina si una fecha es domingo o feriado
 IF OBJECT_ID('dbo.fn_EsFeriadoODomingo', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_EsFeriadoODomingo;
 GO
@@ -38,9 +28,7 @@ BEGIN
 END;
 GO
 
---======================================================================
--- Función auxiliar: último jueves de un mes
---======================================================================
+--Función auxiliar: último jueves de un mes
 IF OBJECT_ID('dbo.fn_UltimoJuevesDelMes', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_UltimoJuevesDelMes;
 GO
@@ -62,9 +50,7 @@ BEGIN
     RETURN @vDia;
 END;
 GO
---======================================================================
--- Función auxiliar: cuenta jueves entre dos fechas
---======================================================================
+--Función auxiliar: cuenta jueves entre dos fechas
 IF OBJECT_ID('dbo.fn_ContarJueves', 'FN') IS NOT NULL
     DROP FUNCTION dbo.fn_ContarJueves;
 GO
@@ -84,17 +70,15 @@ BEGIN
     RETURN @vCantidad;
 END;
 GO
---======================================================================
--- sp_InicializarSistema
--- Crea el primer MesPlanilla antes de correr la simulacion.
--- La semana se abre en el primer jueves procesado para que ya existan empleados.
---======================================================================
+--sp_InicializarSistema
+--Crea el primer MesPlanilla antes de correr la simulacion.
+--La semana se abre en el primer jueves procesado para que ya existan empleados.
 IF OBJECT_ID('dbo.sp_InicializarSistema', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_InicializarSistema;
 GO
 
 CREATE PROCEDURE dbo.sp_InicializarSistema
-    @inFechaInicioSimulacion DATE       -- Debe ser viernes
+    @inFechaInicioSimulacion DATE
   , @outResultCode           INT OUTPUT
 AS
 BEGIN
@@ -128,11 +112,9 @@ BEGIN
     END CATCH;
 END;
 GO
---======================================================================
--- sp_ProcesarAsistenciaEmpleado
--- Procesa la asistencia de UN empleado en una transacción atómica.
--- Si falla, solo afecta a ese empleado — los demás siguen procesándose.
---======================================================================
+--sp_ProcesarAsistenciaEmpleado
+--Procesa la asistencia de UN empleado en una transacción atómica.
+--Si falla, solo afecta a ese empleado — los demás siguen procesándose.
 IF OBJECT_ID('dbo.sp_ProcesarAsistenciaEmpleado', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_ProcesarAsistenciaEmpleado;
 GO
@@ -149,7 +131,7 @@ BEGIN
     SET NOCOUNT ON;
     SET @outResultCode = 0;
 
-    -- Variables de búsqueda (fuera de la transacción para detectar errores de datos)
+    --Variables de búsqueda (fuera de la transacción para detectar errores de datos)
     DECLARE @vIdEmpleado              INT;
     DECLARE @vSalarioXHora            DECIMAL(10,2);
     DECLARE @vFechaEntrada            DATE = CAST(@inFechaHoraEntrada AS DATE);
@@ -157,7 +139,7 @@ BEGIN
     DECLARE @vIdPlanillaSemXEmpleado  INT;
     DECLARE @vFinJornadaDT            DATETIME;
 
-    -- Obtener empleado y salario
+    --Obtener empleado y salario
     SELECT
         @vIdEmpleado  = e.IdEmpleado
       , @vSalarioXHora = p.SalarioXHora
@@ -172,7 +154,7 @@ BEGIN
         RETURN;
     END;
 
-    -- Obtener jornada de la semana actual
+    --Obtener jornada de la semana actual
     SELECT TOP (1)
         @vIdTipoJornada = jes.IdTipoJornada
     FROM   dbo.JornadaEmpleadoSemana AS jes
@@ -186,7 +168,7 @@ BEGIN
         RETURN;
     END;
 
-    -- Calcular fin de jornada (nocturna cruza medianoche)
+    --Calcular fin de jornada (nocturna cruza medianoche)
     SELECT
         @vFinJornadaDT =
             CASE
@@ -201,7 +183,7 @@ BEGIN
     FROM dbo.TipoJornada AS tj
     WHERE (tj.IdTipoJornada = @vIdTipoJornada);
 
-    -- Obtener planilla semanal abierta
+    --Obtener planilla semanal abierta
     SELECT TOP (1)
         @vIdPlanillaSemXEmpleado = pse.IdPlanillaSemXEmpleado
     FROM   dbo.PlanillaSemXEmpleado AS pse
@@ -217,7 +199,6 @@ BEGIN
         RETURN;
     END;
 
-    -- ---- Cálculo de horas ----
     DECLARE @vMinutosTrabajados  INT = DATEDIFF(MINUTE, @inFechaHoraEntrada, @inFechaHoraSalida);
     DECLARE @vMinutosJornada     INT = DATEDIFF(MINUTE, @inFechaHoraEntrada, @vFinJornadaDT);
 
@@ -268,7 +249,6 @@ BEGIN
     DECLARE @vMontoExtraNormal DECIMAL(12,2) = @vHorasExtraNormales * @vSalarioXHora * 1.5;
     DECLARE @vMontoExtraDoble  DECIMAL(12,2) = @vHorasExtraDobles   * @vSalarioXHora * 2.0;
 
-    -- ---- Transacción atómica por empleado ----
     BEGIN TRY
         BEGIN TRANSACTION;
 
@@ -289,7 +269,7 @@ BEGIN
             INSERT INTO dbo.MovimientoPlanilla (IdPlanillaSemXEmpleado, IdTipoMovimiento, IdMarcaAsistencia, Fecha, Cantidad, Monto)
             VALUES (@vIdPlanillaSemXEmpleado, 3, @vIdMarca, @vFechaEntrada, @vHorasExtraDobles, @vMontoExtraDoble);
 
-        -- Acumular en planilla semanal del empleado
+        --Acumular en planilla semanal del empleado
         UPDATE dbo.PlanillaSemXEmpleado
         SET
             SalarioBruto       = SalarioBruto       + @vMontoOrdinario + @vMontoExtraNormal + @vMontoExtraDoble
@@ -298,7 +278,7 @@ BEGIN
           , HorasExtraDobles   = HorasExtraDobles   + @vHorasExtraDobles
         WHERE (IdPlanillaSemXEmpleado = @vIdPlanillaSemXEmpleado);
 
-        -- Acumular salario bruto mensual en la misma transaccion del empleado
+        --Acumular salario bruto mensual en la misma transaccion del empleado
         UPDATE pme
         SET
             SalarioBrutoMensual = SalarioBrutoMensual + @vMontoOrdinario + @vMontoExtraNormal + @vMontoExtraDoble
@@ -314,7 +294,7 @@ BEGIN
         IF (@@ROWCOUNT = 0)
             RAISERROR('No existe PlanillaMesXEmpleado para el empleado procesado.', 16, 1);
 
-        -- Bitácora
+        --Bitácora
         INSERT INTO dbo.BitacoraEvento (IdUsuario, IdTipoEvento, IPOrigen, Parametros)
         VALUES (
             @inIdUsuarioSistema
@@ -333,13 +313,11 @@ BEGIN
         SET @outResultCode = 50008;
         INSERT INTO dbo.DBErrors (NombreSP, Mensaje, Severidad, Estado, Linea)
         VALUES ('sp_ProcesarAsistenciaEmpleado', ERROR_MESSAGE(), ERROR_SEVERITY(), ERROR_STATE(), ERROR_LINE());
-        -- NO re-lanzamos el error: el empleado falló pero la simulación continúa
+        --NO re-lanzamos el error: el empleado falló pero la simulación continúa
     END CATCH;
 END;
 GO
---======================================================================
--- sp_CierreSemanal
---======================================================================
+--sp_CierreSemanal
 IF OBJECT_ID('dbo.sp_CierreSemanal', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_CierreSemanal;
 GO
@@ -441,7 +419,7 @@ BEGIN
             SET @vIdPlanillaMesSiguiente = NULL;
             SET @vMontoDeducciones = 0;
 
-            -- El primer empleado crea los encabezados del siguiente ciclo.
+            --El primer empleado crea los encabezados del siguiente ciclo.
             IF (@vFila = 1)
             BEGIN
                 IF (@vEsUltimaSemanaMes = 1)
@@ -676,9 +654,7 @@ BEGIN
     END;
 END;
 GO
---======================================================================
--- sp_AperturaSemana
---======================================================================
+--sp_AperturaSemana
 IF OBJECT_ID('dbo.sp_AperturaSemana', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_AperturaSemana;
 GO
@@ -748,9 +724,7 @@ BEGIN
 END;
 GO
 
---======================================================================
--- sp_AperturaMes
---======================================================================
+--sp_AperturaMes
 IF OBJECT_ID('dbo.sp_AperturaMes', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_AperturaMes;
 GO
@@ -790,17 +764,7 @@ BEGIN
     END CATCH;
 END;
 GO
---======================================================================
--- sp_EjecutarSimulacion (maestro)
---
--- CORRECCIÓN CRÍTICA 1: Itera por fechas CONSECUTIVAS entre la primera
--- y la última fecha del XML. Si una fecha no está en el XML, la procesa
--- igual (sin datos → solo avanza el calendario) en lugar de saltársela.
---
--- CORRECCIÓN CRÍTICA 2: Cada asistencia se procesa con su propia
--- transacción atómica por empleado. Si falla un empleado, solo ese
--- empleado se registra en DBErrors y la simulación continúa.
---======================================================================
+--sp_EjecutarSimulacion
 IF OBJECT_ID('dbo.sp_EjecutarSimulacion', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_EjecutarSimulacion;
 GO
@@ -817,7 +781,7 @@ BEGIN
 
     DECLARE @vResultCode INT = 0;
 
-    -- Cargar TODAS las fechas del XML en una tabla indexada por fecha
+    --Cargar TODAS las fechas del XML en una tabla indexada por fecha
     DECLARE @tNodosXML TABLE (
         Fecha    DATE PRIMARY KEY
       , NodoXML  XML
@@ -829,7 +793,7 @@ BEGIN
       , nodo.query('.')
     FROM @inXMLOperacion.nodes('/Operaciones/FechaOperacion') AS x(nodo);
 
-    -- Obtener rango completo de fechas (primera → última del XML)
+    --Obtener rango completo de fechas (primera → última del XML)
     DECLARE @vFechaInicio DATE;
     DECLARE @vFechaFin    DATE;
 
@@ -844,11 +808,9 @@ BEGIN
         RETURN;
     END;
 
-    -- ================================================================
-    -- BUCLE PRINCIPAL: itera CADA día consecutivo del rango
-    -- Si el día no existe en el XML → NodoXML queda NULL → no hay datos
-    -- que procesar pero el calendario avanza normalmente.
-    -- ================================================================
+    --BUCLE PRINCIPAL: itera CADA día consecutivo del rango
+    --Si el día no existe en el XML → NodoXML queda NULL → no hay datos
+    --que procesar pero el calendario avanza normalmente.
     DECLARE @vFechaActual DATE = @vFechaInicio;
     DECLARE @vNodoActual  XML;
     DECLARE @vDiaSemana   INT;
@@ -861,7 +823,7 @@ BEGIN
 
     WHILE (@vFechaActual <= @vFechaFin)
     BEGIN
-        -- Obtener nodo del XML para esta fecha (NULL si no existe)
+        --Obtener nodo del XML para esta fecha (NULL si no existe)
         SET @vNodoActual = NULL;
         SELECT @vNodoActual = NodoXML
         FROM   @tNodosXML
@@ -870,16 +832,13 @@ BEGIN
         SET @vDiaSemana = DATEPART(WEEKDAY, @vFechaActual);
         SET @vEsJueves  = CASE WHEN (@vDiaSemana = 5) THEN 1 ELSE 0 END;
 
-        PRINT '--- Procesando ' + CONVERT(VARCHAR, @vFechaActual, 103)
+        PRINT 'Procesando ' + CONVERT(VARCHAR, @vFechaActual, 103)
             + CASE WHEN @vNodoActual IS NULL THEN ' [sin datos en XML]' ELSE '' END;
 
-        -- ============================================================
-        -- Solo procesar nodos si la fecha existe en el XML
-        -- ============================================================
+        --Solo procesar nodos si la fecha existe en el XML
         IF (@vNodoActual IS NOT NULL)
         BEGIN
 
-            -- ---- Insertar nuevos empleados ----
             DECLARE @tNuevos TABLE (
                 Fila           INT IDENTITY(1,1)
               , ValorDocumento  VARCHAR(30)
@@ -933,7 +892,6 @@ BEGIN
             END;
             DELETE FROM @tNuevos;
 
-            -- ---- Eliminar empleados ----
             DECLARE @tEliminar TABLE (Fila INT IDENTITY(1,1), ValorDocumento VARCHAR(30));
             INSERT INTO @tEliminar (ValorDocumento)
             SELECT n.value('@ValorDocumentoIdentidad','VARCHAR(30)')
@@ -952,7 +910,6 @@ BEGIN
             END;
             DELETE FROM @tEliminar;
 
-            -- ---- Asociar deducciones ----
             DECLARE @tAsoc TABLE (
                 Fila INT IDENTITY(1,1), ValorDocumento VARCHAR(30),
                 NombreDeduccion VARCHAR(100), MontoFijo DECIMAL(12,2)
@@ -983,7 +940,6 @@ BEGIN
             END;
             DELETE FROM @tAsoc;
 
-            -- ---- Desasociar deducciones ----
             DECLARE @tDesasoc TABLE (
                 Fila INT IDENTITY(1,1), ValorDocumento VARCHAR(30), NombreDeduccion VARCHAR(100)
             );
@@ -1008,10 +964,6 @@ BEGIN
             END;
             DELETE FROM @tDesasoc;
 
-            -- ---- Procesar asistencias — TRANSACCIONAL POR EMPLEADO ----
-            -- Cada llamada a sp_ProcesarAsistenciaEmpleado tiene su propia
-            -- transacción. Si falla un empleado, solo ese empleado queda en
-            -- DBErrors; los siguientes se procesan normalmente.
             DECLARE @tMarcas TABLE (
                 Fila INT IDENTITY(1,1), ValorDocumento VARCHAR(30),
                 HoraEntrada DATETIME, HoraSalida DATETIME
@@ -1031,7 +983,7 @@ BEGIN
                 SELECT @vDoc=ValorDocumento,@vEntrada=HoraEntrada,@vSalida=HoraSalida
                 FROM @tMarcas WHERE Fila=@vFila;
 
-                -- Cada empleado en su propia transacción atómica
+                --Cada empleado en su propia transacción atómica
                 IF (@vDoc IS NOT NULL)
                     EXEC dbo.sp_ProcesarAsistenciaEmpleado
                         @inValorDocumento   = @vDoc
@@ -1041,7 +993,7 @@ BEGIN
                       , @inIPOrigen        = @inIPOrigen
                       , @outResultCode     = @vResultCode OUTPUT;
 
-                -- Si falló, queda registrado en DBErrors pero la sim continúa
+                --Si falló, queda registrado en DBErrors pero la sim continúa
                 IF (@vResultCode <> 0)
                     PRINT 'AVISO: Asistencia de ' + @vDoc + ' no procesada. Código: ' + CAST(@vResultCode AS VARCHAR);
 
@@ -1049,16 +1001,14 @@ BEGIN
             END;
             DELETE FROM @tMarcas;
 
-        END; -- IF nodoXML IS NOT NULL
+        END;
 
-        -- ============================================================
-        -- Procesamiento de JUEVES (independiente de si hay XML o no)
-        -- ============================================================
+        --Procesamiento de JUEVES (independiente de si hay XML o no)
         IF (@vEsJueves = 1)
         BEGIN
             SET @vFechaViernes = DATEADD(DAY, 1, @vFechaActual);
 
-            -- Asignar jornadas de la próxima semana (solo si hay XML)
+            --Asignar jornadas de la próxima semana (solo si hay XML)
             IF (@vNodoActual IS NOT NULL)
             BEGIN
                 DECLARE @tJornadas TABLE (
@@ -1092,15 +1042,15 @@ BEGIN
                     SET @vFila=@vFila+1;
                 END;
                 DELETE FROM @tJornadas;
-            END; -- IF nodoActual IS NOT NULL (jornadas)
+            END;
 
-            -- Cierre de semana
+            --Cierre de semana
             SET @vResultCode = 0;
             EXEC dbo.sp_CierreSemanal
                 @inFechaJueves=@vFechaActual, @inIdUsuarioSistema=@inIdUsuarioSistema,
                 @inIPOrigen=@inIPOrigen, @outResultCode=@vResultCode OUTPUT;
 
-            -- Primer jueves: todavia no existe semana que cerrar, solo se abre la primera semana.
+            --Primer jueves: todavia no existe semana que cerrar, solo se abre la primera semana.
             IF (@vResultCode = 50015)
             BEGIN
                 SET @vFechaFinSemana = DATEADD(DAY, 6, @vFechaViernes);
@@ -1113,14 +1063,14 @@ BEGIN
             IF (@vResultCode <> 0)
                 PRINT 'AVISO: Cierre semanal no completado. Código: ' + CAST(@vResultCode AS VARCHAR);
 
-        END; -- IF es jueves
+        END;
 
-        -- Avanzar al día siguiente
+        --Avanzar al día siguiente
         SET @vFechaActual = DATEADD(DAY, 1, @vFechaActual);
 
-    END; -- WHILE
+    END;
 
-    PRINT '=== Simulación completada exitosamente. ===';
+    PRINT 'Simulación completada exitosamente.';
 
     END TRY
     BEGIN CATCH

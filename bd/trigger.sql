@@ -2,7 +2,6 @@
 --Al insertar un empleado, asociarlo automaticamente
 --con todas las deducciones obligatorias
 
-
 USE PlanillaObrera;
 GO
 
@@ -34,9 +33,9 @@ BEGIN
         SELECT
             i.IdEmpleado
           , td.IdTipoDeduccion
-          , td.Valor   
-          , i.FechaIngreso 
-          , NULL             
+          , td.Valor
+          , i.FechaIngreso
+          , NULL
         FROM inserted AS i
         CROSS JOIN dbo.TipoDeduccion AS td
         WHERE (td.EsObligatoria = 1);

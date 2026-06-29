@@ -1,9 +1,4 @@
 <Datos>
-<!--
- =====================================================
-        PUESTOS (sin Id — IDENTITY genera la PK, mapeo por Nombre)
-    ====================================================== 
--->
 <Puestos>
 <Puesto Nombre="Electricista" SalarioXHora="1200.00"/>
 <Puesto Nombre="Auxiliar de Laboratorio" SalarioXHora="1250.00"/>
@@ -16,21 +11,11 @@
 <Puesto Nombre="Fontanero" SalarioXHora="1300.00"/>
 <Puesto Nombre="Albanil" SalarioXHora="1050.00"/>
 </Puestos>
-<!--
- =====================================================
-        TIPOS DE JORNADA (Id del XML, NO identity)
-    ====================================================== 
--->
 <TiposJornada>
 <TipoJornada Id="1" Nombre="Diurno" HoraInicio="06:00:00" HoraFin="14:00:00"/>
 <TipoJornada Id="2" Nombre="Vespertino" HoraInicio="14:00:00" HoraFin="22:00:00"/>
 <TipoJornada Id="3" Nombre="Nocturno" HoraInicio="22:00:00" HoraFin="06:00:00"/>
 </TiposJornada>
-<!--
- =====================================================
-        FERIADOS (Id del XML, NO identity)
-    ====================================================== 
--->
 <Feriados>
 <Feriado Id="1" Nombre="Dia de Juan Santamaria" Fecha="2026-04-11"/>
 <Feriado Id="2" Nombre="Jueves Santo" Fecha="2026-04-16"/>
@@ -42,11 +27,6 @@
 <Feriado Id="8" Nombre="Dia de las Culturas" Fecha="2026-10-12"/>
 <Feriado Id="9" Nombre="Navidad" Fecha="2026-12-25"/>
 </Feriados>
-<!--
- =====================================================
-        TIPOS DE EVENTO (Id del XML, NO identity)
-    ====================================================== 
--->
 <TiposEvento>
 <TipoEvento Id="1" Nombre="Login Exitoso"/>
 <TipoEvento Id="2" Nombre="Login No Exitoso"/>
@@ -63,12 +43,6 @@
 <TipoEvento Id="13" Nombre="Intento de insertar movimiento"/>
 <TipoEvento Id="14" Nombre="Insertar movimiento exitoso"/>
 </TiposEvento>
-<!--
- =====================================================
-        TIPOS DE MOVIMIENTO (Id del XML, NO identity)
-        Accion: C=Credito, D=Debito
-    ====================================================== 
--->
 <TiposMovimiento>
 <TipoMovimiento Id="1" Nombre="Credito Horas Ordinarias" Accion="C"/>
 <TipoMovimiento Id="2" Nombre="Credito Horas Extra Normales" Accion="C"/>
@@ -79,35 +53,17 @@
 <TipoMovimiento Id="7" Nombre="Debito Ahorro Obligatorio" Accion="D"/>
 <TipoMovimiento Id="8" Nombre="Debito Pension Alimenticia" Accion="D"/>
 </TiposMovimiento>
-<!--
- =====================================================
-        TIPOS DE DEDUCCION (Id del XML, NO identity)
-        EsObligatoria/EsPorcentual: 0=No, 1=Si
-        TipoMovimiento: Nombre del TipoMovimiento asociado (FK lookup)
-    ====================================================== 
--->
 <TiposDeduccion>
 <TipoDeduccion Id="1" Nombre="Obligatorio de Ley" EsObligatoria="1" EsPorcentual="1" Valor="0.0950" TipoMovimiento="Debito CCSS"/>
 <TipoDeduccion Id="2" Nombre="Ahorro Asociacion Solidarista" EsObligatoria="0" EsPorcentual="1" Valor="0.0500" TipoMovimiento="Debito Asociacion Solidarista"/>
 <TipoDeduccion Id="3" Nombre="Ahorro Vacacional" EsObligatoria="0" EsPorcentual="0" Valor="0.0000" TipoMovimiento="Debito Ahorro Obligatorio"/>
 <TipoDeduccion Id="4" Nombre="Pension Alimenticia" EsObligatoria="0" EsPorcentual="0" Valor="0.0000" TipoMovimiento="Debito Pension Alimenticia"/>
 </TiposDeduccion>
-<!--
- =====================================================
-        USUARIOS (Id del XML, NO identity)
-        Tipo: 1=Administrador, 2=Empleado
-    ====================================================== 
--->
 <Usuarios>
 <Usuario Id="1" Username="admin" PasswordHash="admin123" Tipo="1"/>
 <Usuario Id="2" Username="Goku" PasswordHash="1234" Tipo="1"/>
 <Usuario Id="3" Username="Willy" PasswordHash="1234" Tipo="1"/>
 </Usuarios>
-<!--
- =====================================================
-        CODIGOS DE ERROR (Codigo del XML, PK directa)
-    ====================================================== 
--->
 <Error>
 <error Codigo="50001" Descripcion="Username no existe"/>
 <error Codigo="50002" Descripcion="Password no existe"/>

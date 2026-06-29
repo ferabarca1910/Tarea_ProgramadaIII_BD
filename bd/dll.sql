@@ -2,7 +2,6 @@
 --DDL - Control de Asistencia y Planilla Obrera
 --Motor: MS SQL Server
 
-
 USE master;
 GO
 
@@ -19,10 +18,8 @@ GO
 USE PlanillaObrera;
 GO
 
-
 --TABLAS CATALOGO
 --PK fija (viene del XML excepto Puesto que es IDENTITY
-
 
 CREATE TABLE dbo.TipoJornada (
     IdTipoJornada   INT          NOT NULL
@@ -93,7 +90,6 @@ CREATE TABLE dbo.CodigoError (
 );
 GO
 
-
 --USUARIOS
 --Tipo: 1 = Administrador, 2 = Empleado
 
@@ -108,7 +104,6 @@ CREATE TABLE dbo.Usuario (
   , CONSTRAINT CK_Usuario_Tipo     CHECK (Tipo IN (1, 2))
 );
 GO
-
 
 --EMPLEADO
 --Sin TipoDocumentoIdentidad ni Departamento (eliminados por el profe)
@@ -130,7 +125,6 @@ CREATE TABLE dbo.Empleado (
 );
 GO
 
-
 --DEDUCCIONES POR EMPLEADO
 --FechaFin NULL significa que la deduccion esta vigente
 --Al desasociar, se pone FechaFin en lugar de borrar (conserva historial)
@@ -148,7 +142,6 @@ CREATE TABLE dbo.DeduccionEmpleado (
 );
 GO
 
-
 --JORNADA DEL EMPLEADO POR SEMANA
 --e asigna cada jueves para la semana siguiente (inicia viernes)
 
@@ -164,7 +157,6 @@ CREATE TABLE dbo.JornadaEmpleadoSemana (
 );
 GO
 
-
 --MES PLANILLA
 --Va del ultimo viernes del mes anterior al ultimo jueves del mes
 --CantidadJueves: 4 o 5, determina como se dividen deducciones fijas
@@ -179,7 +171,6 @@ CREATE TABLE dbo.MesPlanilla (
 );
 GO
 
-
 --SEMANA PLANILLA
 --Siempre va de viernes a jueves
 
@@ -193,7 +184,6 @@ CREATE TABLE dbo.SemanaPlanilla (
   , CONSTRAINT FK_SP_MesPlanilla  FOREIGN KEY (IdMesPlanilla) REFERENCES dbo.MesPlanilla(IdMesPlanilla)
 );
 GO
-
 
 --PLANILLA SEMANAL POR EMPLEADO
 --Un registro por empleado por semana
@@ -216,7 +206,6 @@ CREATE TABLE dbo.PlanillaSemXEmpleado (
 );
 GO
 
-
 --PLANILLA MENSUAL POR EMPLEADO
 --Es la suma de las planillas semanales del mes planilla
 
@@ -234,7 +223,6 @@ CREATE TABLE dbo.PlanillaMesXEmpleado (
 );
 GO
 
-
 --DETALLE DE DEDUCCIONES POR EMPLEADO POR MES
 --Acumula cuanto se dedujo por cada tipo de deduccion en el mes
 
@@ -248,7 +236,6 @@ CREATE TABLE dbo.DeduccionXEmpleadoXMes (
   , CONSTRAINT FK_DXExMes_TipoDeduccion       FOREIGN KEY (IdTipoDeduccion)        REFERENCES dbo.TipoDeduccion(IdTipoDeduccion)
 );
 GO
-
 
 --MARCA DE ASISTENCIA
 --HoraEntrada y HoraSalida son DATETIME porque la jornada nocturna
@@ -264,7 +251,6 @@ CREATE TABLE dbo.MarcaAsistencia (
   , CONSTRAINT FK_MA_Empleado         FOREIGN KEY (IdEmpleado) REFERENCES dbo.Empleado(IdEmpleado)
 );
 GO
-
 
 --MOVIMIENTOS DE PLANILLA
 --Un movimiento por cada concepto generado por una asistencia

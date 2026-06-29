@@ -2,7 +2,6 @@
 --Carga de catalogos en PlanillaObrera
 --Ejecutar DESPUES de sp_catalogos.sql
 
-
 USE PlanillaObrera;
 GO
 
