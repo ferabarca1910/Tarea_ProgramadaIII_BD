@@ -220,7 +220,6 @@
 <FechaOperacion Fecha="2026-03-26">
 <!-- Jueves -->
 <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-03-26 22:00" HoraSalida="2026-03-27 06:00"/>
-<MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-03-26 06:00" HoraSalida="2026-03-26 14:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-03-26 14:00" HoraSalida="2026-03-27 00:30"/>
 <MarcaAsistencia ValorDocumentoIdentidad="222333444" HoraEntrada="2026-03-26 22:00" HoraSalida="2026-03-27 06:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="444555666" HoraEntrada="2026-03-26 14:00" HoraSalida="2026-03-26 22:00"/>
@@ -233,7 +232,6 @@
  Cierre semana 3: jornada semana 4 (InicioSemana 2026-03-27) 
 -->
 <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Diurno" InicioSemana="2026-03-27"/>
-<AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Vespertino" InicioSemana="2026-03-27"/>
 <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Nocturno" InicioSemana="2026-03-27"/>
 <AsignarJornada ValorDocumentoIdentidad="222333444" Jornada="Diurno" InicioSemana="2026-03-27"/>
 <AsignarJornada ValorDocumentoIdentidad="333444555" Jornada="Vespertino" InicioSemana="2026-03-27"/>
@@ -377,7 +375,6 @@
 <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-04-09 06:00" HoraSalida="2026-04-09 14:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="222333444" HoraEntrada="2026-04-09 14:00" HoraSalida="2026-04-09 22:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="444555666" HoraEntrada="2026-04-09 06:00" HoraSalida="2026-04-09 16:30"/>
-<MarcaAsistencia ValorDocumentoIdentidad="555666777" HoraEntrada="2026-04-09 14:00" HoraSalida="2026-04-10 00:30"/>
 <MarcaAsistencia ValorDocumentoIdentidad="666777888" HoraEntrada="2026-04-09 22:00" HoraSalida="2026-04-10 06:00"/>
 <!-- Nuevos empleados: inician semana 2026-04-10 -->
 <InsertarEmpleado ValorDocumentoIdentidad="777888999" Nombre="Mario Quesada" Puesto="Conductor" CuentaBancaria="CR2415115201901026111006" Username="Quesmar" Password="Mario987" TipoUsuario="0" FechaContratacion="2026-04-10"/>
@@ -392,7 +389,6 @@
 <AsignarJornada ValorDocumentoIdentidad="222333444" Jornada="Nocturno" InicioSemana="2026-04-10"/>
 <AsignarJornada ValorDocumentoIdentidad="333444555" Jornada="Diurno" InicioSemana="2026-04-10"/>
 <AsignarJornada ValorDocumentoIdentidad="444555666" Jornada="Vespertino" InicioSemana="2026-04-10"/>
-<AsignarJornada ValorDocumentoIdentidad="555666777" Jornada="Nocturno" InicioSemana="2026-04-10"/>
 <AsignarJornada ValorDocumentoIdentidad="666777888" Jornada="Diurno" InicioSemana="2026-04-10"/>
 <AsignarJornada ValorDocumentoIdentidad="777888999" Jornada="Vespertino" InicioSemana="2026-04-10"/>
 <AsignarJornada ValorDocumentoIdentidad="888999000" Jornada="Nocturno" InicioSemana="2026-04-10"/>
@@ -466,7 +462,6 @@
 <MarcaAsistencia ValorDocumentoIdentidad="222333444" HoraEntrada="2026-04-16 22:00" HoraSalida="2026-04-17 08:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="444555666" HoraEntrada="2026-04-16 14:00" HoraSalida="2026-04-16 22:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="666777888" HoraEntrada="2026-04-16 06:00" HoraSalida="2026-04-16 14:00"/>
-<MarcaAsistencia ValorDocumentoIdentidad="777888999" HoraEntrada="2026-04-16 14:00" HoraSalida="2026-04-16 22:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="888999000" HoraEntrada="2026-04-16 22:00" HoraSalida="2026-04-17 06:00"/>
 <!-- Eliminar empleado: termina semana 2026-03-27 -->
 <EliminarEmpleado ValorDocumentoIdentidad="777888999"/>
@@ -479,7 +474,6 @@
 <AsignarJornada ValorDocumentoIdentidad="333444555" Jornada="Vespertino" InicioSemana="2026-04-17"/>
 <AsignarJornada ValorDocumentoIdentidad="444555666" Jornada="Nocturno" InicioSemana="2026-04-17"/>
 <AsignarJornada ValorDocumentoIdentidad="666777888" Jornada="Vespertino" InicioSemana="2026-04-17"/>
-<AsignarJornada ValorDocumentoIdentidad="777888999" Jornada="Nocturno" InicioSemana="2026-04-17"/>
 <AsignarJornada ValorDocumentoIdentidad="888999000" Jornada="Diurno" InicioSemana="2026-04-17"/>
 <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="222333444" TipoDeduccion="Pension Alimenticia" MontoFijo="40000.00"/>
 </FechaOperacion>
@@ -820,7 +814,6 @@
 <MarcaAsistencia ValorDocumentoIdentidad="222333444" HoraEntrada="2026-05-14 06:00" HoraSalida="2026-05-14 16:30"/>
 <MarcaAsistencia ValorDocumentoIdentidad="444555666" HoraEntrada="2026-05-14 22:00" HoraSalida="2026-05-15 08:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="666777888" HoraEntrada="2026-05-14 14:00" HoraSalida="2026-05-14 22:00"/>
-<MarcaAsistencia ValorDocumentoIdentidad="888999000" HoraEntrada="2026-05-14 06:00" HoraSalida="2026-05-14 14:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="999000111" HoraEntrada="2026-05-14 14:00" HoraSalida="2026-05-14 22:00"/>
 <MarcaAsistencia ValorDocumentoIdentidad="400500600" HoraEntrada="2026-05-14 06:00" HoraSalida="2026-05-14 14:00"/>
 <!-- Eliminar empleado: termina semana 2026-03-27 -->
